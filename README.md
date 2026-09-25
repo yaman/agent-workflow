@@ -177,9 +177,11 @@ registers a **session-start charter** (`bootstrap/CHARTER.md`) so the workflow's
 entry contract is present from the first turn.
 
 The charter is gated: it fires only in a project that opted in — one with a
-`workflow.config.toml`, or where `AGENT_WORKFLOW` is set. In any other project
-it stays silent, so an unrelated repo is never told to run a workflow whose
-database isn't there.
+`workflow.config.toml`, or where `AGENT_WORKFLOW` is set to a truthy value. In
+any other project it stays silent, so an unrelated repo is never told to run a
+workflow whose database isn't there. `AGENT_WORKFLOW` treats `0`, `false`, `no`
+and `off` (any case) as unset, so `AGENT_WORKFLOW=0` disables rather than
+enables.
 
 | Host | Mechanism | Gating |
 |---|---|---|
