@@ -455,6 +455,16 @@ grep -q 'pending → red → green\|pending -> red -> green' skills/story-atdd-w
   || { bad "schema no longer documents the AC state machine"; f34=1; }
 [ "$f34" = 0 ] && pass "skill records pending→red→green, matching the schema"
 
+echo "== 35. installer accepts --flag=value as well as --flag value =="
+f35=0
+a=$(node install/install.mjs --host=claude 2>/dev/null | grep -c '=== claude ->' || true)
+b=$(node install/install.mjs --host claude 2>/dev/null | grep -c '=== claude ->' || true)
+[ "${a:-0}" -ge 1 ] || { bad "--host=claude not accepted"; f35=1; }
+[ "${b:-0}" -ge 1 ] || { bad "--host claude not accepted"; f35=1; }
+t=$(node install/install.mjs --host claude --target=/tmp/aw-eq-check 2>/dev/null | grep -c '/tmp/aw-eq-check' || true)
+[ "${t:-0}" -ge 1 ] || { bad "--target=DIR not accepted"; f35=1; }
+[ "$f35" = 0 ] && pass "both --flag=value and --flag value forms work"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"

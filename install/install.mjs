@@ -21,7 +21,10 @@ const pkgRoot = path.resolve(here, "..");
 
 const argv = process.argv.slice(2);
 const has = (f) => argv.includes(f);
+// Accept both `--flag value` and `--flag=value`. Falls back to `d` when absent.
 const valueOf = (f, d) => {
+  const eq = argv.find((a) => a.startsWith(`${f}=`));
+  if (eq !== undefined) return eq.slice(f.length + 1);
   const i = argv.indexOf(f);
   return i !== -1 && argv[i + 1] && !argv[i + 1].startsWith("--") ? argv[i + 1] : d;
 };
