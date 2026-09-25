@@ -41,7 +41,7 @@ Ten expert personas review a product in parallel, then the chair synthesizes wit
 ## Dispatch protocol
 
 1. Load `references/personas.md`; select the roster by mode.
-2. Dispatch ALL personas in a single message via the `task` tool (`general` subagent type), each with: the shared problem block + their persona block + the mode instruction.
+2. Dispatch ALL personas in a single message via the subagent tool with the generic agent (`General` on opencode, `general-purpose` on Claude Code), each with: the shared problem block + their persona block + the mode instruction.
 3. Empty persona result → re-dispatch that one brief. Task-tool failure → retry once, then proceed with the remaining personas and report the gap.
 4. No task tool in this harness: decline the run and say why, OR proceed sequentially with the independence caveat explicitly recorded in the verdict (parallel dispatch is the independence mechanism — a sequential run's verdict must carry the caveat, never silently).
 

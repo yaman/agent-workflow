@@ -49,7 +49,7 @@ This skill uses the **single-db, body-embedded AC model** (`backlog.mode = "sing
    - Domain Expert → AC2 (exact Gherkin)
    - Contrarian → AC3 (exact Gherkin)
    - Risk Analyst → depends_on edges + estimate (justified for a single ATDD session)
-3. Dispatch ALL 6 in a single message via the `task` tool (`general` subagent type), each with: the shared problem block + their persona block + the mode instruction. (On a harness whose subagent tool has a different name, translate — the mapping is documented in this skill's `references/tool-mapping.md`.)
+3. Dispatch ALL 6 in a single message via the subagent tool with the generic agent (`General` on opencode, `general-purpose` on Claude Code), each with: the shared problem block + their persona block + the mode instruction. (On a harness whose subagent tool has a different name, translate — the mapping is documented in this skill's `references/tool-mapping.md`.)
 4. If any persona returns empty: re-dispatch that one brief. If the task tool fails, retry once, then proceed with the remaining personas and report the gap.
 
 ## Synthesis (mandatory structure)

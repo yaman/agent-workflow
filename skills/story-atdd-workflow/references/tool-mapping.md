@@ -22,14 +22,19 @@ whose tool names differ. The canonical role is on the left.
 ## Subagent names
 
 The workflow refers to subagent *roles*: **architect**, **developer**,
-**rust-developer**, **svelte-developer**, **code-reviewer**, **qa** (plus
-`general`/`explore`). A harness exposes them by whatever name its agent
-registry uses:
+**rust-developer**, **svelte-developer**, **code-reviewer**, **qa**, and the
+generic dispatcher for the councils. A harness exposes them by whatever name its
+agent registry uses:
 
 - opencode: the agent files in `~/.config/opencode/agents/<name>.md` register
-  under their `name`/filename.
+  under their `name`/filename. The generic subagent is **`General`**.
 - Claude Code: the same files installed to `~/.claude/agents/<name>.md`
-  register under their frontmatter `name`.
+  register under their frontmatter `name`. The generic subagent is
+  **`general-purpose`**.
+
+So a skill that says "dispatch via the subagent tool with the `general` type"
+means `General` on opencode and `general-purpose` on Claude Code — pick the
+generic agent your harness provides.
 
 The installer in this package renders the agent files for either host (see
 `install/install.mjs` and the agent frontmatter translation below).
