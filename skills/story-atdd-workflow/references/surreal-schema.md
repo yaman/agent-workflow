@@ -68,7 +68,7 @@ Mutable; the single source of truth for "what is happening right now".
 
 ### `iteration`
 
-The iteration's plan header (successor of the writing-plans header block).
+The iteration's plan header (the header block that used to live in a plan file).
 
 | Field | Type | Notes |
 |---|---|---|

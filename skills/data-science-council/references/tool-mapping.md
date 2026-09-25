@@ -8,7 +8,7 @@ whose tool names differ. The canonical role is on the left.
 | Role in the skills | opencode | Claude Code | Notes |
 |---|---|---|---|
 | Dispatch a subagent | `task` with `agent`/`subagent_type` | `Agent` | Give `description` + `prompt`; pass a session id to continue one. |
-| Track a todo list | (v2 has none; keep a markdown plan file) | `TodoWrite` | If no todo tool exists, write the plan to a file. |
+| Track a todo list | (v2 has none; keep a scratch checklist) | `TodoWrite` | If no todo tool exists, track the plan as a scratch list — never a plan file (stories are the plan). |
 | Run a shell command | `shell`(v2) / `bash`(v1) | `Bash` | |
 | Read a file | `read` | `Read` | |
 | Create / overwrite a file | `write` | `Write` | |

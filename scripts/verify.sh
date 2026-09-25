@@ -2,7 +2,7 @@
 # verify.sh — prove the pack is project-agnostic and installs cleanly.
 # Run from the repo root. Exits non-zero on any failure.
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 fail=0
 pass() { printf '  ok   %s\n' "$1"; }
@@ -178,14 +178,25 @@ nsteps=$(grep -cE '^## Step [0-9]' skills/story-atdd-workflow/SKILL.md)
 echo "== 17. shared references have not drifted across skills =="
 f17=0
 cfg=$(md5sum references/configuration.md | awk '{print $1}')
-for f in $(find skills -path '*/references/configuration.md'); do
+while IFS= read -r f; do
   [ "$(md5sum "$f" | awk '{print $1}')" = "$cfg" ] || { bad "configuration.md drifted: $f"; f17=1; }
-done
+done < <(find skills -path '*/references/configuration.md')
 tm=$(md5sum references/tool-mapping.md | awk '{print $1}')
-for f in $(find skills -path '*/references/tool-mapping.md'); do
+while IFS= read -r f; do
   [ "$(md5sum "$f" | awk '{print $1}')" = "$tm" ] || { bad "tool-mapping.md drifted: $f"; f17=1; }
-done
+done < <(find skills -path '*/references/tool-mapping.md')
 [ "$f17" = 0 ] && pass "all shared-reference copies match references/"
+
+echo "== 18. shell scripts are shellcheck-clean (if available) =="
+if command -v shellcheck >/dev/null 2>&1; then
+  f18=0
+  for script in scripts/*.sh hooks/*.sh; do
+    shellcheck -S warning "$script" >/dev/null 2>&1 || { bad "shellcheck: $script"; f18=1; }
+  done
+  [ "$f18" = 0 ] && pass "shellcheck (warning level) clean"
+else
+  pass "shellcheck not installed — skipped"
+fi
 
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
