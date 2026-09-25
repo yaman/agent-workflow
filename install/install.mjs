@@ -95,10 +95,18 @@ function renderClaudeAgent(name, text) {
   const { fm, body } = splitFrontmatter(text);
   const description = fmGet(fm, "description") || `${name} subagent`;
   const steps = fmGet(fm, "steps");
-  const lines = [`name: ${name}`, `description: ${description}`];
+  // Quote the description as a JSON string: YAML accepts that form, and it is
+  // required whenever the value contains `: ` or other YAML-significant chars.
+  // Claude Code's frontmatter parser is strict (unlike opencode's), so an
+  // unquoted description with a colon fails to parse and silently drops all
+  // metadata.
+  const lines = [
+    `name: ${name}`,
+    `description: ${JSON.stringify(description)}`,
+  ];
   if (READ_ONLY_AGENTS.has(name)) lines.push(`tools: ${READ_ONLY_TOOLS}`);
   if (steps) lines.push(`maxTurns: ${steps}`);
-  if (model) lines.push(`model: ${model}`);
+  if (model) lines.push(`model: ${JSON.stringify(model)}`);
   return `---\n${lines.join("\n")}\n---\n${body.startsWith("\n") ? body : "\n" + body}`;
 }
 

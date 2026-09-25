@@ -87,6 +87,21 @@ else
   bad "tool-set rendering"
 fi
 
+echo "== 9. rendered Claude descriptions are YAML-safe =="
+# A description containing ': ' (or starting with a YAML indicator) must be
+# quoted, or Claude Code's strict parser drops the whole frontmatter.
+f9=0
+for a in agents/*.md; do
+  name=$(basename "$a" .md)
+  line=$(node install/install.mjs --host claude --print-agent "$name" 2>/dev/null | grep -E '^description:' | head -1)
+  val=${line#description: }
+  case "$val" in
+    \"*\") : ;;  # quoted -> fine
+    *": "*) bad "unquoted description with colon in $name"; f9=1 ;;
+  esac
+done
+[ "$f9" = 0 ] && pass "all descriptions are quoted or colon-free"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"
