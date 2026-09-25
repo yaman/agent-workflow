@@ -269,9 +269,15 @@ function unplanClaudeBootstrap(target, hookScript) {
 }
 
 // opencode: ensure the charter path is in the config `instructions` array.
-function planOpencodeBootstrap(target, charterPath) {
+// Resolve the same way plan and unplan do, so the two stay symmetric: prefer an
+// existing opencode.jsonc, else opencode.json, else default to opencode.json.
+function resolveOpencodeConfig(target) {
   const candidates = ["opencode.json", "opencode.jsonc"].map((f) => path.join(target, f));
-  const settingsPath = candidates.find((p) => fs.existsSync(p)) || candidates[0];
+  return candidates.find((p) => fs.existsSync(p)) || candidates[0];
+}
+
+function planOpencodeBootstrap(target, charterPath) {
+  const settingsPath = resolveOpencodeConfig(target);
   const settings = readJsonFile(settingsPath);
   if (settings === null) {
     return { path: settingsPath, ok: false, reason: `${path.basename(settingsPath)} exists but is not valid JSON` };
@@ -285,7 +291,7 @@ function planOpencodeBootstrap(target, charterPath) {
 }
 
 function unplanOpencodeBootstrap(target, charterPath) {
-  const settingsPath = path.join(target, "opencode.json");
+  const settingsPath = resolveOpencodeConfig(target);
   const settings = readJsonFile(settingsPath);
   if (settings === null || !Array.isArray(settings.instructions)) {
     return { path: settingsPath, ok: true, changed: false, settings: settings || {} };

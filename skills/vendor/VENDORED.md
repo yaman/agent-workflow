@@ -71,6 +71,12 @@ self-gate line. See the README's "How the workflow loads".
 - Local modifications: cross-reference patches only (documented per row above);
   no behavioral edits.
 
+**License notice shipping.** MIT requires the copyright notice to travel with
+substantial portions of the code. Each vendored skill directory therefore
+carries a copy of upstream's `LICENSE` (plus one at `skills/vendor/superpowers/LICENSE`),
+so the notice stays attached when the installer or `npx skills` copies a skill
+to a user's machine.
+
 To refresh: re-copy the seven skill trees from a newer superpowers tag and
 re-apply the three patches: brainstorming's handoff to `story-atdd-workflow`,
 brainstorming's skill-relative `visual-companion.md` citation, and

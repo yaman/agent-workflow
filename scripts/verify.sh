@@ -207,6 +207,34 @@ if grep -rn '`skills/[a-z0-9-]*/' skills/*/ 2>/dev/null | grep -v '/vendor/VENDO
 fi
 [ "$f19" = 0 ] && pass "skill citations are skill-relative"
 
+echo "== 20. opencode bootstrap install/uninstall are symmetric (json and jsonc) =="
+f20=0
+for conf in opencode.json opencode.jsonc; do
+  T20=$(mktemp -d)
+  printf '%s\n' '{"model":"keep-me"}' > "$T20/$conf"
+  node install/install.mjs --host opencode --target "$T20" --apply >/dev/null 2>&1
+  got=$(grep -c CHARTER "$T20/$conf" 2>/dev/null || true)
+  node install/install.mjs --host opencode --target "$T20" --uninstall-bootstrap --apply >/dev/null 2>&1
+  left=$(grep -c CHARTER "$T20/$conf" 2>/dev/null || true)
+  got=${got:-0}; left=${left:-0}
+  model=$(python3 -c "import json;print(json.load(open('$T20/$conf')).get('model'))" 2>/dev/null)
+  rm -rf "$T20"
+  if [ "$got" != "1" ] || [ "$left" != "0" ] || [ "$model" != "keep-me" ]; then
+    bad "opencode $conf: installed=$got left=$left model=$model"; f20=1
+  fi
+done
+[ "$f20" = 0 ] && pass "both config names install and uninstall cleanly"
+
+echo "== 21. every vendored skill ships the upstream license notice =="
+f21=0
+for d in skills/vendor/superpowers/*/; do
+  [ -f "$d/SKILL.md" ] || continue
+  if [ ! -f "$d/LICENSE" ] || ! grep -q 'Jesse Vincent' "$d/LICENSE"; then
+    bad "missing/incomplete LICENSE in $d"; f21=1
+  fi
+done
+[ "$f21" = 0 ] && pass "all vendored skills carry the MIT notice"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"
