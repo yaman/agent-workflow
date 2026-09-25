@@ -198,6 +198,15 @@ else
   pass "shellcheck not installed — skipped"
 fi
 
+echo "== 19. no skill-internal citation breaks when installed flat =="
+# Inside a skill dir, a citation must be relative to the skill root, never
+# repo-root-relative (`skills/<name>/...`), which breaks after a flat install.
+f19=0
+if grep -rn '`skills/[a-z0-9-]*/' skills/*/ 2>/dev/null | grep -v '/vendor/VENDORED.md' >/tmp/opencode/aw-flat.txt; then
+  bad "repo-root-relative cite inside a skill:"; sed 's/^/       /' /tmp/opencode/aw-flat.txt; f19=1
+fi
+[ "$f19" = 0 ] && pass "skill citations are skill-relative"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"

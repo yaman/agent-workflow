@@ -44,8 +44,9 @@ A later design question makes a **new** spec and **new** stories, not a re-entry
 ## Configuration
 
 Project-specific values — namespace, databases, deploy commands, traversal
-tools, test harnesses — come from `workflow.config.toml` at the project root.
-Read it; never hardcode them.
+tools, test harnesses — come from `workflow.config.toml` (the project root, or
+your machine default at `~/.config/agent-workflow/config.toml`). Read it; never
+hardcode them.
 
 ## Self-gate
 

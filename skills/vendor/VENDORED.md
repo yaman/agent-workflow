@@ -13,7 +13,7 @@ calls into (`skills/vendor/superpowers/`).
 
 | Skill | Why it is here |
 |---|---|
-| `brainstorming` | `story-atdd-workflow` Step 1 starts from a spec; brainstorming is how the spec is produced. Patched: its terminal step now hands off to `story-atdd-workflow` instead of `writing-plans`. |
+| `brainstorming` | `story-atdd-workflow` Step 1 starts from a spec; brainstorming is how the spec is produced. Patched: its terminal step now hands off to `story-atdd-workflow` instead of `writing-plans`; its `visual-companion.md` citation is skill-relative (upstream's `skills/brainstorming/…` form breaks when the skill is installed flat). |
 | `finishing-a-development-branch` | Named in `story-atdd-workflow` Step 5. |
 | `systematic-debugging` | Debugging discipline for bugs encountered mid-AC. Patched: its failing-test step points at our red-first gate, not the removed `test-driven-development`. |
 | `verification-before-completion` | Evidence-before-claims; pairs with the per-layer RED-evidence rule. |
@@ -71,6 +71,8 @@ self-gate line. See the README's "How the workflow loads".
 - Local modifications: cross-reference patches only (documented per row above);
   no behavioral edits.
 
-To refresh: re-copy the seven `SKILL.md` trees from a newer superpowers tag and
-re-apply the two patches (brainstorming's handoff, systematic-debugging's
-failing-test reference).
+To refresh: re-copy the seven skill trees from a newer superpowers tag and
+re-apply the three patches: brainstorming's handoff to `story-atdd-workflow`,
+brainstorming's skill-relative `visual-companion.md` citation, and
+systematic-debugging's failing-test reference (which points at our red-first
+gate, not the removed `test-driven-development`).

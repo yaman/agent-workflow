@@ -15,6 +15,12 @@ Read the first of these that exists, then stop:
 
 State the resolved values once in your report so the human can correct them.
 
+**Activation vs. values.** The session-start bootstrap (the workflow charter
+injected at session start) fires only when the **project-root** config exists or
+`AGENT_WORKFLOW` is set — a machine default supplies *values* but does not by
+itself activate the injected charter. The skills themselves resolve the full
+order above regardless.
+
 ## Keys and their defaults
 
 | Placeholder | Default | Meaning |
