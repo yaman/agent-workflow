@@ -435,6 +435,15 @@ function run() {
   let skipped = 0;
   let identical = 0;
 
+  // A bare `--apply` (no --target) writes into the host's real config directory.
+  // Say so loudly, once, before touching anything.
+  if (apply && !valueOf("--target", null)) {
+    console.log(
+      "\nNOTE: no --target given; applying to your real host config directory.\n" +
+        "      Pass --target DIR to install into a sandbox instead."
+    );
+  }
+
   for (const h of hosts) {
     const { target, plan } = planFor(h);
     console.log(`\n=== ${h} -> ${target} (${apply ? "APPLY" : "dry-run"}) ===`);

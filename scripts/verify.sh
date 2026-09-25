@@ -522,6 +522,26 @@ done
 rm -rf "$tmp38"
 [ "$f38" = 0 ] && pass "missing package files fail with exit 1"
 
+echo "== 39. bare --apply warns it is writing to the real host config =="
+f39=0
+# dry-run: no warning (nothing is written)
+if node install/install.mjs --host claude 2>/dev/null | grep -q 'no --target given'; then
+  bad "dry-run wrongly warns about writing"; f39=1
+fi
+# sandboxed apply: no warning
+T39=$(mktemp -d)
+if node install/install.mjs --host claude --target "$T39" --apply 2>/dev/null | grep -q 'no --target given'; then
+  bad "sandboxed apply wrongly warns"; f39=1
+fi
+rm -rf "$T39"
+# bare apply, HOME redirected so nothing real is touched: must warn
+H39=$(mktemp -d)
+if ! HOME="$H39" node install/install.mjs --host claude --apply 2>/dev/null | grep -q 'no --target given'; then
+  bad "bare --apply did not warn"; f39=1
+fi
+rm -rf "$H39"
+[ "$f39" = 0 ] && pass "bare --apply warns; dry-run and sandboxed do not"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"
