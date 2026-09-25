@@ -51,6 +51,24 @@ Options: `--target DIR` (install elsewhere), `--model ID` (emit a model in
 Claude agent frontmatter; default is to inherit the session model), `--force`,
 `--help`.
 
+### The `skills` CLI (skills only)
+
+The six **skills** are also installable with the open Agent Skills CLI
+([`npx skills`](https://skills.sh), v1.7.0 tested) — no clone needed:
+
+```bash
+npx skills add yaman/agent-workflow --list        # show the 6 skills
+npx skills add yaman/agent-workflow --all -g      # install all, globally
+npx skills add yaman/agent-workflow -g -s story-atdd-workflow
+```
+
+It discovers `skills/<name>/SKILL.md` (all 6, references included) and installs
+to every detected agent's skill directory — `~/.claude/skills/`, `~/.agents/skills/`, … —
+symlinked by default (`--copy` to copy). **The `skills` CLI installs skills
+only; it does not install subagents.** Use `install/install.mjs` for the agents
+(`architect`, `developer`, `rust-developer`, `svelte-developer`,
+`code-reviewer`, `qa`), or to install both together.
+
 The canonical agent frontmatter is opencode's (the primary host): `mode`,
 `steps`, `permission`. The installer translates it for Claude Code (`steps` →
 `maxTurns`, `permission` → a `tools` allowlist; read-only agents become
