@@ -144,6 +144,8 @@ nothing until `--apply`. An existing file is never overwritten without `--force`
 | `--model ID` | emit a model in Claude agent frontmatter (default: inherit the session model) |
 | `--apply` | actually write (without it: dry-run) |
 | `--force` | overwrite existing files (default: skip and report) |
+| `--bootstrap` / `--no-bootstrap` | register the session-start charter (default: on) |
+| `--uninstall-bootstrap` | remove a registered bootstrap |
 
 `--host both` cannot be combined with `--target` (each host needs its own
 `agents/` directory); run the installer once per host instead.
@@ -166,6 +168,30 @@ Tested with `skills@1.7.0` (needs Node ≥ 22.20). It installs to every detected
 agent's skill directory — `~/.claude/skills/`, `~/.agents/skills/`, … —
 symlinked by default (`--copy` to copy). **It installs skills only, not
 subagents.** For the agents — or both together — use `install/install.mjs`.
+
+## How the workflow loads
+
+Installing the skills is not enough for the agent to *follow* the workflow — by
+default a skill only runs when the model decides to invoke it. This pack also
+registers a **session-start charter** (`bootstrap/CHARTER.md`) so the workflow's
+entry contract is present from the first turn.
+
+The charter is gated: it fires only in a project that opted in — one with a
+`workflow.config.toml`, or where `AGENT_WORKFLOW` is set. In any other project
+it stays silent, so an unrelated repo is never told to run a workflow whose
+database isn't there.
+
+| Host | Mechanism | Gating |
+|---|---|---|
+| **Claude Code** | a `SessionStart` hook merged into `settings.json`, which prints the charter as `hookSpecificOutput.additionalContext` | **Real**: the hook script checks for `workflow.config.toml` / `AGENT_WORKFLOW` and emits nothing otherwise |
+| **opencode** | the charter path added to the config `instructions` array | **Weak**: opencode injects `instructions` unconditionally, so scoping depends on the model honoring the charter's self-gate line |
+
+That asymmetry is real and deliberate — opencode has no per-session gate at the
+config level. If strict opencode gating matters, an `opencode` plugin using
+`session.hook("context")` would be the fix (not shipped yet).
+
+Disable it with `--no-bootstrap`; remove it with `--uninstall-bootstrap`. Both
+are idempotent and back up any file they modify.
 
 ## Configure a project
 

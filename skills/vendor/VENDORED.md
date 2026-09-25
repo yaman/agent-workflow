@@ -44,15 +44,23 @@ Four more are irrelevant to this workflow and excluded for size:
 
 Superpowers is more than a skills directory. Its behavior is enforced by a
 **SessionStart hook** (`hooks/session-start`) that injects "you MUST use the
-skill" into every session, and an `using-superpowers` bootstrap skill. Copying
-the skills does not copy that machinery, and this pack intentionally does not
-recreate it — the workflow here is invoked through `story-atdd-workflow` and the
-pack's agents, not through a mandatory-skill gate.
+skill" into every session, and an `using-superpowers` bootstrap skill.
 
-If a colleague wants the full upstream enforcement, they can additionally
-install superpowers itself (`npx skills add obra/superpowers`, or as an opencode
-plugin) — but note the four excluded skills above would then be present, and
-should be removed or ignored.
+This pack now reproduces that **mechanism** — see `bootstrap/CHARTER.md` and
+`hooks/session-start.sh` — with two deliberate differences:
+
+- **Scope.** Upstream injects into every session on the machine. This pack's
+  charter is gated: it fires only in a project with a `workflow.config.toml` (or
+  `AGENT_WORKFLOW` set), because the workflow is project-scoped and needs a
+  SurrealDB backlog.
+- **Text.** Upstream injects the `using-superpowers` meta-rule ("check every
+  skill before any response"). This pack injects the workflow's *entry
+  contract* instead — brainstorming → spec → `story-atdd-workflow` — not a
+  mandatory-skill gate.
+
+The opencode side is weaker than the Claude side: opencode's `instructions`
+injection has no per-session gate, so its scoping relies on the charter's
+self-gate line. See the README's "How the workflow loads".
 
 ## Provenance
 

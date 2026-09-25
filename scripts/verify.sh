@@ -126,6 +126,43 @@ else
   bad "installer does not flatten vendored skills"
 fi
 
+echo "== 13. bootstrap charter exists and self-gates =="
+if [ -f bootstrap/CHARTER.md ] && grep -q 'does not apply' bootstrap/CHARTER.md; then
+  pass "charter present with self-gate line"
+else
+  bad "charter missing or has no self-gate line"
+fi
+
+echo "== 14. session-start hook gates correctly =="
+f14=0
+if [ ! -x hooks/session-start.sh ]; then bad "hook not executable"; f14=1; fi
+TMPD=$(mktemp -d)
+mkdir -p "$TMPD/on" "$TMPD/off"
+: > "$TMPD/on/workflow.config.toml"
+closed=$(CLAUDE_PROJECT_DIR="$TMPD/off" bash hooks/session-start.sh)
+[ -z "$closed" ] || { bad "hook emitted output with the gate closed"; f14=1; }
+opened=$(CLAUDE_PROJECT_DIR="$TMPD/on" bash hooks/session-start.sh)
+printf '%s' "$opened" | python3 -m json.tool >/dev/null 2>&1 \
+  || { bad "hook output with the gate open is not valid JSON"; f14=1; }
+[ -n "$opened" ] || { bad "hook emitted nothing with the gate open"; f14=1; }
+rm -rf "$TMPD"
+[ "$f14" = 0 ] && pass "gate closed: silent; gate open: valid JSON"
+
+echo "== 15. bootstrap merge is idempotent (both hosts) =="
+T15=$(mktemp -d)
+node install/install.mjs --host claude --target "$T15/claude" --apply >/dev/null 2>&1
+node install/install.mjs --host claude --target "$T15/claude" --apply >/dev/null 2>&1
+n_claude=$(python3 -c "import json;print(len(json.load(open('$T15/claude/settings.json'))['hooks']['SessionStart']))" 2>/dev/null)
+node install/install.mjs --host opencode --target "$T15/oc" --apply >/dev/null 2>&1
+node install/install.mjs --host opencode --target "$T15/oc" --apply >/dev/null 2>&1
+n_oc=$(python3 -c "import json;print(len(json.load(open('$T15/oc/opencode.json')).get('instructions',[])))" 2>/dev/null)
+rm -rf "$T15"
+if [ "$n_claude" = "1" ] && [ "$n_oc" = "1" ]; then
+  pass "applying twice yields exactly one entry per host"
+else
+  bad "merge not idempotent (claude=$n_claude opencode=$n_oc)"
+fi
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"

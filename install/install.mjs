@@ -42,6 +42,11 @@ Options:
                   so each subagent inherits the session model).
   --apply         Actually write. Without it, prints the plan only (dry-run).
   --force         Overwrite existing files (default: skip + report).
+  --bootstrap     Register the workflow charter at session start (default: on).
+                  claude:   merges a SessionStart hook into settings.json
+                  opencode: adds the charter to the config instructions list
+  --no-bootstrap  Skip the session-start registration.
+  --uninstall-bootstrap  Remove a previously registered bootstrap.
   --print-agent N Print the agent N rendered for the host, then exit (debug).
   --help          This text.
 `);
@@ -59,6 +64,8 @@ if (!host || !["claude", "opencode", "both"].includes(host)) {
 const apply = has("--apply");
 const force = has("--force");
 const model = valueOf("--model", null);
+const bootstrap = !has("--no-bootstrap");
+const uninstallBootstrap = has("--uninstall-bootstrap");
 
 // `--host both` writes opencode-shaped and claude-shaped agents to different
 // paths; a single --target would make them collide. Require per-host defaults.
@@ -211,6 +218,144 @@ function planFor(h) {
 
 // --------------------------------------------------------------------- execute
 
+// ------------------------------------------------------------ session bootstrap
+
+// Merge a JSON object into a settings file idempotently. Returns a report
+// describing what changed, without writing unless `write` is true.
+function readJsonFile(p) {
+  if (!fs.existsSync(p)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(p, "utf8"));
+  } catch {
+    return null; // exists but unparseable
+  }
+}
+
+function backupFile(p) {
+  if (!fs.existsSync(p)) return null;
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const bak = `${p}.aw-bak-${stamp}`;
+  fs.copyFileSync(p, bak);
+  return bak;
+}
+
+// claude: ensure settings.json has exactly one SessionStart handler for our hook.
+function planClaudeBootstrap(target, hookScript) {
+  const settingsPath = path.join(target, "settings.json");
+  const settings = readJsonFile(settingsPath);
+  if (settings === null) {
+    return { path: settingsPath, ok: false, reason: "settings.json exists but is not valid JSON" };
+  }
+  const hooks = (settings.hooks ||= {});
+  const groups = (hooks.SessionStart ||= []);
+  const already = groups.some((g) =>
+    (g.hooks || []).some((hh) => hh.command === hookScript)
+  );
+  if (already) {
+    return { path: settingsPath, ok: true, changed: false, settings };
+  }
+  groups.push({
+    matcher: "startup|resume|clear|compact",
+    hooks: [{ type: "command", command: hookScript }],
+  });
+  return { path: settingsPath, ok: true, changed: true, settings };
+}
+
+function unplanClaudeBootstrap(target, hookScript) {
+  const settingsPath = path.join(target, "settings.json");
+  const settings = readJsonFile(settingsPath);
+  if (settings === null || !settings.hooks || !settings.hooks.SessionStart) {
+    return { path: settingsPath, ok: true, changed: false, settings: settings || {} };
+  }
+  const before = settings.hooks.SessionStart.length;
+  settings.hooks.SessionStart = settings.hooks.SessionStart
+    .map((g) => ({ ...g, hooks: (g.hooks || []).filter((hh) => hh.command !== hookScript) }))
+    .filter((g) => (g.hooks || []).length > 0);
+  const changed = settings.hooks.SessionStart.length !== before;
+  if (settings.hooks.SessionStart.length === 0) delete settings.hooks.SessionStart;
+  if (settings.hooks && Object.keys(settings.hooks).length === 0) delete settings.hooks;
+  return { path: settingsPath, ok: true, changed, settings };
+}
+
+// opencode: ensure the charter path is in the config `instructions` array.
+function planOpencodeBootstrap(target, charterPath) {
+  const candidates = ["opencode.json", "opencode.jsonc"].map((f) => path.join(target, f));
+  const settingsPath = candidates.find((p) => fs.existsSync(p)) || candidates[0];
+  const settings = readJsonFile(settingsPath);
+  if (settings === null) {
+    return { path: settingsPath, ok: false, reason: `${path.basename(settingsPath)} exists but is not valid JSON` };
+  }
+  const list = Array.isArray(settings.instructions) ? settings.instructions : [];
+  if (list.includes(charterPath)) {
+    return { path: settingsPath, ok: true, changed: false, settings };
+  }
+  settings.instructions = [...list, charterPath];
+  return { path: settingsPath, ok: true, changed: true, settings };
+}
+
+function unplanOpencodeBootstrap(target, charterPath) {
+  const settingsPath = path.join(target, "opencode.json");
+  const settings = readJsonFile(settingsPath);
+  if (settings === null || !Array.isArray(settings.instructions)) {
+    return { path: settingsPath, ok: true, changed: false, settings: settings || {} };
+  }
+  const before = settings.instructions.length;
+  settings.instructions = settings.instructions.filter((p) => p !== charterPath);
+  if (settings.instructions.length === 0) delete settings.instructions;
+  return { path: settingsPath, ok: true, changed: settings.instructions?.length !== before, settings };
+}
+
+function runBootstrap(hosts) {
+  // The hook script and charter are installed under the target:
+  //   <target>/hooks/session-start.sh, <target>/CHARTER.md
+  for (const h of hosts) {
+    const target = resolveTarget(h);
+    const hookScript = path.join(target, "hooks", "session-start.sh");
+    const charterPath = path.join(target, "CHARTER.md");
+
+    if (uninstallBootstrap) {
+      const r = h === "claude"
+        ? unplanClaudeBootstrap(target, hookScript)
+        : unplanOpencodeBootstrap(target, charterPath);
+      console.log(`\n=== bootstrap uninstall: ${h} -> ${r.path} ===`);
+      if (!r.ok) { console.log(`  ! ${r.reason} — left untouched`); continue; }
+      if (!r.changed) { console.log("  = no bootstrap entry present"); continue; }
+      console.log("  - remove bootstrap entry");
+      if (apply) { backupFile(r.path); fs.writeFileSync(r.path, JSON.stringify(r.settings, null, 2) + "\n"); }
+      continue;
+    }
+
+    if (!bootstrap) continue;
+
+    // Files the bootstrap needs (placed by the normal file plan only for
+    // claude's hook; ensure both exist regardless of file-plan skipping).
+    const needs = h === "claude"
+      ? [[path.join(pkgRoot, "hooks", "session-start.sh"), hookScript], [path.join(pkgRoot, "bootstrap", "CHARTER.md"), charterPath]]
+      : [[path.join(pkgRoot, "bootstrap", "CHARTER.md"), charterPath]];
+
+    console.log(`\n=== bootstrap: ${h} ===`);
+    for (const [src, dst] of needs) {
+      if (fs.existsSync(dst) && !force) { console.log(`  = ${path.relative(target, dst)} (present)`); continue; }
+      console.log(`  + ${path.relative(target, dst)}`);
+      if (apply) {
+        fs.mkdirSync(path.dirname(dst), { recursive: true });
+        fs.copyFileSync(src, dst);
+        if (dst.endsWith(".sh")) fs.chmodSync(dst, 0o755);
+      }
+    }
+
+    const r = h === "claude"
+      ? planClaudeBootstrap(target, hookScript)
+      : planOpencodeBootstrap(target, charterPath);
+    if (!r.ok) { console.log(`  ! ${r.reason} — left untouched`); continue; }
+    console.log(`  ${r.changed ? "+ merge" : "="} SessionStart/instructions in ${path.relative(target, r.path)}`);
+    if (r.changed && apply) {
+      backupFile(r.path);
+      fs.writeFileSync(r.path, JSON.stringify(r.settings, null, 2) + "\n");
+    }
+  }
+}
+
 function run() {
   // Debug seam: render one agent for a host, no disk writes.
   if (has("--print-agent")) {
@@ -273,6 +418,9 @@ function run() {
     `\n${apply ? "Wrote" : "Would write"} ${wrote} file(s); ` +
       `${identical} unchanged; ${skipped} skipped (existing, differing).`
   );
+
+  runBootstrap(hosts);
+
   if (!apply) console.log("Dry-run only. Re-run with --apply to install.");
   if (skipped && !force)
     console.log("Note: skipped files already exist with different content. Nothing was overwritten.");
