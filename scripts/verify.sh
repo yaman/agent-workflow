@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # verify.sh — prove the pack is project-agnostic and installs cleanly.
-# Run from the repo root. Exits non-zero on any failure.
+# Runnable from any cwd and via a symlink. Exits non-zero on any failure.
+# Needs: bash, node (for the installer dry-runs), python3 + pyyaml (for the
+# frontmatter/placeholder/strict-YAML checks). Without python3 those checks fail
+# — run verify.sh on a dev machine that has it.
 set -uo pipefail
 # Resolve this script's real directory, following symlinks, so the suite works
 # when invoked via a symlink or from any cwd.

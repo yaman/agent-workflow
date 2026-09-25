@@ -24,6 +24,8 @@ from `workflow.config.toml` at runtime — see
 | **Node.js ≥ 22.20** | the `npx skills` CLI, if you use that route instead |
 | **SurrealDB** at `127.0.0.1:8000` (or your own endpoint) | the backlog + run state |
 | **git** | cloning the repo |
+| **python3** (3.11+, with `pyyaml`) | `scripts/verify.sh` — 7 of its 41 checks (frontmatter, placeholders, strict YAML); the suite reports failures without it |
+| **bash** | the hook and the scripts (all `#!/usr/bin/env bash`) |
 
 You only need SurrealDB for the two story-backlog skills
 (`story-atdd-workflow`, `story-writing-council`). `architecture-rules` and the
