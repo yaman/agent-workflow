@@ -30,8 +30,14 @@ in this skill's `references/configuration.md`. Never hardcode them.
 
 ## The workflow
 
+**Entry — once, before this workflow:** `brainstorming` → a **spec** (a design
+doc on disk). This skill *consumes* that spec as its input; it does not produce
+it. If work later raises a new design question, that goes back to `brainstorming`
+as a **new** spec producing **new** stories — a forward edge with new input,
+never a re-entry of the current story. (No plan files: the stories and their
+ACs are the plan.)
+
 ```
-brainstorm → spec (design doc on disk)
 story writing          → map db (${backlog.map_db}): epic + story (ACs are the contract)
 architectural decisions → map db: decision (stack + per-layer architecture)
 per story at pickup    → architect subagent → tech_brief (per-AC sections) → with the story

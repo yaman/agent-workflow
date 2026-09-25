@@ -57,23 +57,29 @@ Claude Code, or ask the agent to use `story-atdd-workflow`. Then say
 
 ## The workflow at a glance
 
-`story-atdd-workflow` is the core loop. It takes a spec (from brainstorming)
-and drives it to done, dispatching subagents per step:
+`story-atdd-workflow` is the core loop. **Brainstorming is its entry point, not a
+step inside it:** brainstorming runs once and produces the spec; the workflow
+then consumes that spec as input and drives it to done, dispatching subagents
+per step.
 
 ```
-spec (on disk)
-  │
-  ├─ stories + ACs ───────────→ SurrealDB map db
-  │
-  └─ per story:
+ONCE, before the workflow:
+  brainstorming ──→ spec (design doc on disk)
+                       │
+                       ▼  story-atdd-workflow takes over
+  stories + ACs ───────┴────→ SurrealDB map db
+
+  THEN per story:
        architect subagent  → tech_brief (files, seams, test locations)
-         └─ per AC, one at a time, strictly serial:
+         └─ PER AC, one at a time, strictly serial:   ← the only repeat
               developer subagent   → acceptance test RED
                                    → layer-by-layer TDD GREEN
                                    → commit
               refactor subagent    → dedup/rename, full suite green
               coordinator          → deploy + smoke every environment
-       → story done
+       story done → next story (back to "architect subagent")
+
+Nothing loops back to brainstorming: it ran once, before this workflow.
 ```
 
 Surrounding skills: **wisdom-council** for a consequential design decision,
