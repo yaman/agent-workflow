@@ -578,6 +578,16 @@ for val in '[]' '"hello"' '42'; do
 done
 [ "$f41" = 0 ] && pass "empty→{}, non-object shapes declined without crash"
 
+echo "== 42. config keys named in skills are documented in configuration.md =="
+f42=0
+# Keys the skills tell the reader to look up in configuration.md must be there.
+for key in verdict_destinations base_urls; do
+  if grep -rq "$key" skills/ --include='*.md' 2>/dev/null; then
+    grep -q "$key" references/configuration.md || { bad "$key referenced by skills but undocumented"; f42=1; }
+  fi
+done
+[ "$f42" = 0 ] && pass "referenced config keys are documented"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"

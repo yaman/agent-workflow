@@ -64,6 +64,21 @@ write to the project's real namespace/db. Tests point the same env at a
 throwaway namespace and assert the guard fires. This replaces any
 tool-specific guard variable.
 
+## Verdict destinations (councils)
+
+The council skills (`data-science-council`, `product-verification-council`)
+record a verdict to SurrealDB only when the user asks. Their destination is
+resolved in this order:
+
+1. an explicit user instruction;
+2. a `[verdict_destinations]` entry keyed by topic (`{namespace, db, table}`);
+3. the `[backlog]` namespace/db with table `verdict`.
+
+If it is ambiguous, ask one question — never invent a destination. The key is
+optional; the example config carries it commented out. Fields written:
+`{ id, target_id, kind, mode, verdict, chair_line, consensus[], adjudications[],
+must_fix[], persona_count, ts, source_text }`.
+
 ## Deploy and smoke
 
 A project with no deploy step sets `environments = []`. Otherwise the
