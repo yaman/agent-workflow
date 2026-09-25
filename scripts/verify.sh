@@ -588,6 +588,16 @@ for key in verdict_destinations base_urls; do
 done
 [ "$f42" = 0 ] && pass "referenced config keys are documented"
 
+echo "== 43. a symlink inside a skill tree fails loudly, not silently =="
+f43=0
+T43=$(mktemp -d); cp -r "$(pwd)" "$T43/p" 2>/dev/null || true
+ln -s /etc/hostname "$T43/p/skills/wisdom-council/zz-link.md" 2>/dev/null
+( cd "$T43/p" && node install/install.mjs --host claude --target "$T43/out" >/dev/null 2>&1 )
+rc=$?
+[ "$rc" = "1" ] || { bad "symlink in skill tree did not fail (exit $rc)"; f43=1; }
+rm -rf "$T43"
+[ "$f43" = 0 ] && pass "symlinked skill content is rejected, not dropped"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"

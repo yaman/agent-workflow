@@ -145,10 +145,18 @@ const IGNORED_FILES = /\.(pyc|pyo)$/;
 
 // Collect every file under a skill dir, relative to the skill dir, skipping
 // generated artifacts (pytest/py caches) that a local test run may leave behind.
+// A symlink inside a skill tree is rejected loudly: silently skipping it would
+// be a silent partial install.
 function skillFiles(skillDir) {
   const out = [];
   const walk = (abs, rel) => {
     for (const e of fs.readdirSync(abs, { withFileTypes: true })) {
+      if (e.isSymbolicLink()) {
+        console.error(
+          `error: ${path.join(abs, e.name)} is a symlink; symlinks are not supported inside a skill tree.`
+        );
+        process.exit(1);
+      }
       if (e.isDirectory() && IGNORED_DIRS.has(e.name)) continue;
       if (e.isFile() && IGNORED_FILES.test(e.name)) continue;
       const a = path.join(abs, e.name);
