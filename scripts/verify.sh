@@ -444,6 +444,17 @@ for a in architect code-reviewer qa; do
 done
 [ "$f33" = 0 ] && pass "read-only agents are write-incapable"
 
+echo "== 34. the skill records both AC transitions the schema defines =="
+# The schema promises pending -> red -> green is written immediately; the skill
+# must instruct both the red and the green write, not only green.
+f34=0
+sk=skills/story-atdd-workflow/SKILL.md
+grep -q 'acs\[n\].status = "green"' "$sk" || { bad "skill never records the green transition"; f34=1; }
+grep -q 'acs\[n\].status = "red"'   "$sk" || { bad "skill never records the red transition"; f34=1; }
+grep -q 'pending → red → green\|pending -> red -> green' skills/story-atdd-workflow/references/surreal-schema.md \
+  || { bad "schema no longer documents the AC state machine"; f34=1; }
+[ "$f34" = 0 ] && pass "skill records pending→red→green, matching the schema"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"
