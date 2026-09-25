@@ -48,7 +48,7 @@ Nothing loops back to brainstorming. A new design question later produces a
 
 ### 1. The charter — `bootstrap/CHARTER.md`
 
-One canonical, harness-neutral markdown file (~1.5 KB). It is the entry
+One canonical, harness-neutral markdown file (~2.7 KB). It is the entry
 contract, not a copy of the skills:
 
 - This project runs the story-driven ATDD workflow.
@@ -130,8 +130,10 @@ Claude hook. This asymmetry is documented, not hidden.
 
 ## Testing
 
-- `scripts/verify.sh` checks 13–15 (charter, hook executable, gate both ways,
-  merge idempotency).
+- `scripts/verify.sh` checks 13–17, 25 (charter present + self-gate, hook gated
+  both ways, merge idempotency both hosts, charter names every step,
+  `AGENT_WORKFLOW` truthiness); later robustness checks (20, 24) cover the
+  opencode config-name symmetry and the JSONC decline path.
 - Manual: run the hook with and without a config dir; diff the dry-run settings
   merge; confirm `opencode.json` gains exactly one `instructions` entry.
 - **Unverifiable on this machine:** a live Claude `SessionStart` firing
