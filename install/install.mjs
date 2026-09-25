@@ -127,15 +127,6 @@ function resolveTarget(h) {
     : path.join(os.homedir(), ".config", "opencode");
 }
 
-function listDirs(dir) {
-  if (!fs.existsSync(dir)) return [];
-  return fs
-    .readdirSync(dir, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name)
-    .sort();
-}
-
 function listFilesEnding(dir, ext) {
   if (!fs.existsSync(dir)) return [];
   return fs

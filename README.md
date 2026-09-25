@@ -210,8 +210,19 @@ a prompt to you.
 
 ```bash
 bash scripts/verify.sh     # coupling, frontmatter, self-containment,
-                           # script tests, and an installer dry-run
+                           # script tests, installer dry-run, bootstrap,
+                           # charter completeness, reference drift
 ```
+
+`references/configuration.md` and `references/tool-mapping.md` are the single
+source for the shared guidance; each skill carries its own copy so it is
+self-contained on disk. After editing either, re-sync the copies:
+
+```bash
+bash scripts/sync-references.sh
+```
+
+`verify.sh` check 17 fails if a copy drifts.
 
 Uninstall by deleting the installed files (the installer never touches anything
 outside its target):

@@ -163,6 +163,30 @@ else
   bad "merge not idempotent (claude=$n_claude opencode=$n_oc)"
 fi
 
+echo "== 16. charter names every workflow step (drift guard) =="
+# The charter is a summary of story-atdd-workflow; it must name each step.
+# Missing one is how the 'architectural decisions' step was silently dropped.
+f16=0
+for tok in brainstorming "story-atdd-workflow" "stories" "decision" "tech_brief|architect" "acceptance test" "refactor" "deploy"; do
+  if ! grep -qiE "$tok" bootstrap/CHARTER.md; then bad "charter omits: $tok"; f16=1; fi
+done
+# and the 5 steps the skill defines must be reflected (Step 1..5 headings exist)
+nsteps=$(grep -cE '^## Step [0-9]' skills/story-atdd-workflow/SKILL.md)
+[ "$nsteps" -ge 5 ] || { bad "expected >=5 Step headings in the skill, found $nsteps"; f16=1; }
+[ "$f16" = 0 ] && pass "charter covers the workflow steps"
+
+echo "== 17. shared references have not drifted across skills =="
+f17=0
+cfg=$(md5sum references/configuration.md | awk '{print $1}')
+for f in $(find skills -path '*/references/configuration.md'); do
+  [ "$(md5sum "$f" | awk '{print $1}')" = "$cfg" ] || { bad "configuration.md drifted: $f"; f17=1; }
+done
+tm=$(md5sum references/tool-mapping.md | awk '{print $1}')
+for f in $(find skills -path '*/references/tool-mapping.md'); do
+  [ "$(md5sum "$f" | awk '{print $1}')" = "$tm" ] || { bad "tool-mapping.md drifted: $f"; f17=1; }
+done
+[ "$f17" = 0 ] && pass "all shared-reference copies match references/"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"
