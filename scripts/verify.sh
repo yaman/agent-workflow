@@ -555,6 +555,26 @@ for a in architect developer rust-developer svelte-developer code-reviewer qa; d
 done
 [ "$f40" = 0 ] && pass "agents parameterize traversal, no hardcode"
 
+echo "== 41. malformed config shapes are handled safely =="
+f41=0
+# empty file: treated as {} and merged
+H41=$(mktemp -d); mkdir -p "$H41/.claude"; : > "$H41/.claude/settings.json"
+HOME="$H41" node install/install.mjs --host claude --apply >/dev/null 2>&1
+python3 -c "import json;d=json.load(open('$H41/.claude/settings.json'));assert d.get('hooks')" 2>/dev/null \
+  || { bad "empty settings.json was not treated as {}"; f41=1; }
+rm -rf "$H41"
+# array / scalar: declined with a message, no crash, file intact
+for val in '[]' '"hello"' '42'; do
+  H41=$(mktemp -d); mkdir -p "$H41/.claude"; printf '%s' "$val" > "$H41/.claude/settings.json"
+  HOME="$H41" node install/install.mjs --host claude --apply >/tmp/opencode/aw-o.txt 2>/tmp/opencode/aw-e.txt
+  rc=$?
+  grep -q 'TypeError\|SyntaxError' /tmp/opencode/aw-e.txt && { bad "crash on settings.json=$val"; f41=1; }
+  [ "$(cat "$H41/.claude/settings.json")" = "$val" ] || { bad "settings.json=$val was modified"; f41=1; }
+  [ "$rc" = "0" ] || { bad "nonzero exit on settings.json=$val"; f41=1; }
+  rm -rf "$H41"
+done
+[ "$f41" = 0 ] && pass "empty→{}, non-object shapes declined without crash"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"

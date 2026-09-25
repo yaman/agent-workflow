@@ -235,13 +235,22 @@ function planFor(h) {
 
 // Merge a JSON object into a settings file idempotently. Returns a report
 // describing what changed, without writing unless `write` is true.
+// Read a settings file as a JSON object. Returns:
+//   {} for a missing file or an empty/whitespace-only file,
+//   the parsed object when the file holds a JSON object,
+//   null when the file is unparseable OR holds a non-object (array/scalar).
 function readJsonFile(p) {
   if (!fs.existsSync(p)) return {};
+  const raw = fs.readFileSync(p, "utf8");
+  if (raw.trim() === "") return {};
+  let parsed;
   try {
-    return JSON.parse(fs.readFileSync(p, "utf8"));
+    parsed = JSON.parse(raw);
   } catch {
-    return null; // exists but unparseable
+    return null;
   }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  return parsed;
 }
 
 function backupFile(p) {
@@ -257,7 +266,7 @@ function planClaudeBootstrap(target, hookScript) {
   const settingsPath = path.join(target, "settings.json");
   const settings = readJsonFile(settingsPath);
   if (settings === null) {
-    return { path: settingsPath, ok: false, reason: "settings.json exists but is not valid JSON" };
+    return { path: settingsPath, ok: false, reason: "settings.json is not a JSON object (or is unparseable)" };
   }
   const hooks = (settings.hooks ||= {});
   const groups = (hooks.SessionStart ||= []);
