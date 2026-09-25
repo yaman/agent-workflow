@@ -190,6 +190,12 @@ That asymmetry is real and deliberate — opencode has no per-session gate at th
 config level. If strict opencode gating matters, an `opencode` plugin using
 `session.hook("context")` would be the fix (not shipped yet).
 
+One opencode caveat: if your `opencode.json`/`opencode.jsonc` contains comments
+or trailing commas (real JSONC), the installer will **not** edit it — it leaves
+it untouched and tells you to add the charter path to its `instructions` array
+manually, or to set `AGENT_WORKFLOW=1`. It will not strip your comments to make
+the file parseable.
+
 Disable it with `--no-bootstrap`; remove it with `--uninstall-bootstrap`. Both
 are idempotent and back up any file they modify.
 

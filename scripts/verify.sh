@@ -250,6 +250,29 @@ fi
 rm -rf skills/story-writing-council/scripts/__pycache__ skills/story-writing-council/scripts/.pytest_cache
 [ "$f22" = 0 ] && pass "generated artifacts excluded from the install plan"
 
+echo "== 23. installer fails cleanly on an unwritable target =="
+# A write error must be a one-line message + exit 1, not an unhandled stack trace.
+f23=0
+T23=$(mktemp -d); chmod 500 "$T23"
+node install/install.mjs --host claude --target "$T23/sub" --apply >/dev/null 2>/tmp/opencode/aw-ro.err
+rc=$?
+chmod 700 "$T23"; rm -rf "$T23"
+[ "$rc" = "1" ] || { bad "expected exit 1 on unwritable target, got $rc"; f23=1; }
+grep -q '^error: cannot write' /tmp/opencode/aw-ro.err || { bad "no clean error message"; f23=1; }
+grep -q 'Node.js v' /tmp/opencode/aw-ro.err && { bad "stack trace leaked to stderr"; f23=1; }
+[ "$f23" = 0 ] && pass "clean error + exit 1, no stack trace"
+
+echo "== 24. JSONC config is declined with an actionable message (never corrupted) =="
+f24=0
+T24=$(mktemp -d)
+printf '{\n  // user comment\n  "model": "x",\n}\n' > "$T24/opencode.jsonc"
+out=$(node install/install.mjs --host opencode --target "$T24" --apply 2>&1)
+grep -q 'JSONC' <<<"$out" || { bad "no JSONC hint in the message"; f24=1; }
+grep -q 'instructions' <<<"$out" || { bad "message does not say what to do"; f24=1; }
+grep -q '// user comment' "$T24/opencode.jsonc" || { bad "installer modified/corrupted the JSONC file"; f24=1; }
+rm -rf "$T24"
+[ "$f24" = 0 ] && pass "JSONC left intact with an actionable message"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"

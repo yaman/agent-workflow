@@ -287,7 +287,13 @@ function planOpencodeBootstrap(target, charterPath) {
   const settingsPath = resolveOpencodeConfig(target);
   const settings = readJsonFile(settingsPath);
   if (settings === null) {
-    return { path: settingsPath, ok: false, reason: `${path.basename(settingsPath)} exists but is not valid JSON` };
+    return {
+      path: settingsPath,
+      ok: false,
+      reason:
+        `${path.basename(settingsPath)} is JSONC (comments or trailing commas) and cannot be ` +
+        `edited safely — add this path to its "instructions" array manually, or set AGENT_WORKFLOW=1`,
+    };
   }
   const list = Array.isArray(settings.instructions) ? settings.instructions : [];
   if (list.includes(charterPath)) {
@@ -309,6 +315,22 @@ function unplanOpencodeBootstrap(target, charterPath) {
   return { path: settingsPath, ok: true, changed: settings.instructions?.length !== before, settings };
 }
 
+// Write a file, or fail with a clean message instead of an exception trace.
+function writeOrFail(dst, content) {
+  try {
+    fs.mkdirSync(path.dirname(dst), { recursive: true });
+    fs.writeFileSync(dst, content);
+    return true;
+  } catch (e) {
+    console.error(`\nerror: cannot write ${dst}\n       ${e.code || ""} ${e.message}`.trimEnd());
+    console.error(
+      `\nA partial install may exist. Re-run once the cause is fixed;` +
+        ` existing files are skipped unless --force.`
+    );
+    process.exit(1);
+  }
+}
+
 function runBootstrap(hosts) {
   // The hook script and charter are installed under the target:
   //   <target>/hooks/session-start.sh, <target>/CHARTER.md
@@ -325,7 +347,7 @@ function runBootstrap(hosts) {
       if (!r.ok) { console.log(`  ! ${r.reason} — left untouched`); continue; }
       if (!r.changed) { console.log("  = no bootstrap entry present"); continue; }
       console.log("  - remove bootstrap entry");
-      if (apply) { backupFile(r.path); fs.writeFileSync(r.path, JSON.stringify(r.settings, null, 2) + "\n"); }
+      if (apply) { backupFile(r.path); writeOrFail(r.path, JSON.stringify(r.settings, null, 2) + "\n"); }
       continue;
     }
 
@@ -342,9 +364,8 @@ function runBootstrap(hosts) {
       if (fs.existsSync(dst) && !force) { console.log(`  = ${path.relative(target, dst)} (present)`); continue; }
       console.log(`  + ${path.relative(target, dst)}`);
       if (apply) {
-        fs.mkdirSync(path.dirname(dst), { recursive: true });
-        fs.copyFileSync(src, dst);
-        if (dst.endsWith(".sh")) fs.chmodSync(dst, 0o755);
+        writeOrFail(dst, fs.readFileSync(src));
+        try { if (dst.endsWith(".sh")) fs.chmodSync(dst, 0o755); } catch { /* best effort */ }
       }
     }
 
@@ -355,7 +376,7 @@ function runBootstrap(hosts) {
     console.log(`  ${r.changed ? "+ merge" : "="} SessionStart/instructions in ${path.relative(target, r.path)}`);
     if (r.changed && apply) {
       backupFile(r.path);
-      fs.writeFileSync(r.path, JSON.stringify(r.settings, null, 2) + "\n");
+      writeOrFail(r.path, JSON.stringify(r.settings, null, 2) + "\n");
     }
   }
 }
@@ -411,10 +432,7 @@ function run() {
       }
       console.log(`  + ${label}`);
       wrote++;
-      if (apply) {
-        fs.mkdirSync(path.dirname(item.dst), { recursive: true });
-        fs.writeFileSync(item.dst, content);
-      }
+      if (apply) writeOrFail(item.dst, content);
     }
   }
 
