@@ -275,7 +275,7 @@ f24=0
 T24=$(mktemp -d)
 printf '{\n  // user comment\n  "model": "x",\n}\n' > "$T24/opencode.jsonc"
 out=$(node install/install.mjs --host opencode --target "$T24" --apply 2>&1)
-grep -q 'JSONC' <<<"$out" || { bad "no JSONC hint in the message"; f24=1; }
+grep -qiE 'does not parse as JSON|JSONC|comments or trailing commas' <<<"$out" || { bad "no parse-hint in the message"; f24=1; }
 grep -q 'instructions' <<<"$out" || { bad "message does not say what to do"; f24=1; }
 grep -q '// user comment' "$T24/opencode.jsonc" || { bad "installer modified/corrupted the JSONC file"; f24=1; }
 rm -rf "$T24"

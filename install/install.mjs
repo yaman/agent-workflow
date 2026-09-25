@@ -238,7 +238,8 @@ function planFor(h) {
 // Read a settings file as a JSON object. Returns:
 //   {} for a missing file or an empty/whitespace-only file,
 //   the parsed object when the file holds a JSON object,
-//   null when the file is unparseable OR holds a non-object (array/scalar).
+//   { error: "unparseable" } when the JSON does not parse (e.g. JSONC comments),
+//   { error: "not-object" } when it parses but is an array/scalar/null.
 function readJsonFile(p) {
   if (!fs.existsSync(p)) return {};
   const raw = fs.readFileSync(p, "utf8");
@@ -247,10 +248,27 @@ function readJsonFile(p) {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return null;
+    return { error: "unparseable" };
   }
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { error: "not-object" };
+  }
   return parsed;
+}
+
+// A settings object is usable when it is a plain object (not an error marker).
+const isSettings = (s) => s !== null && typeof s === "object" && !s.error;
+
+// A precise, actionable reason for a settings file that could not be used.
+function jsonReason(settingsPath, settings) {
+  const base = path.basename(settingsPath);
+  const fix =
+    `register the charter manually (a SessionStart hook in settings.json, or ` +
+    `the charter path in the opencode instructions array), or set AGENT_WORKFLOW=1`;
+  if (settings && settings.error === "unparseable") {
+    return `${base} does not parse as JSON (comments or trailing commas?) and cannot be edited safely — ${fix}`;
+  }
+  return `${base} does not contain a JSON object (found an array or scalar) — ${fix}`;
 }
 
 function backupFile(p) {
@@ -265,8 +283,8 @@ function backupFile(p) {
 function planClaudeBootstrap(target, hookScript) {
   const settingsPath = path.join(target, "settings.json");
   const settings = readJsonFile(settingsPath);
-  if (settings === null) {
-    return { path: settingsPath, ok: false, reason: "settings.json is not a JSON object (or is unparseable)" };
+  if (!isSettings(settings)) {
+    return { path: settingsPath, ok: false, reason: jsonReason(settingsPath, settings) };
   }
   const hooks = (settings.hooks ||= {});
   const groups = (hooks.SessionStart ||= []);
@@ -286,7 +304,7 @@ function planClaudeBootstrap(target, hookScript) {
 function unplanClaudeBootstrap(target, hookScript) {
   const settingsPath = path.join(target, "settings.json");
   const settings = readJsonFile(settingsPath);
-  if (settings === null || !settings.hooks || !settings.hooks.SessionStart) {
+  if (!isSettings(settings) || !settings.hooks || !settings.hooks.SessionStart) {
     return { path: settingsPath, ok: true, changed: false, settings: settings || {} };
   }
   const before = settings.hooks.SessionStart.length;
@@ -310,14 +328,8 @@ function resolveOpencodeConfig(target) {
 function planOpencodeBootstrap(target, charterPath) {
   const settingsPath = resolveOpencodeConfig(target);
   const settings = readJsonFile(settingsPath);
-  if (settings === null) {
-    return {
-      path: settingsPath,
-      ok: false,
-      reason:
-        `${path.basename(settingsPath)} is JSONC (comments or trailing commas) and cannot be ` +
-        `edited safely — add this path to its "instructions" array manually, or set AGENT_WORKFLOW=1`,
-    };
+  if (!isSettings(settings)) {
+    return { path: settingsPath, ok: false, reason: jsonReason(settingsPath, settings) };
   }
   const list = Array.isArray(settings.instructions) ? settings.instructions : [];
   if (list.includes(charterPath)) {
@@ -330,7 +342,7 @@ function planOpencodeBootstrap(target, charterPath) {
 function unplanOpencodeBootstrap(target, charterPath) {
   const settingsPath = resolveOpencodeConfig(target);
   const settings = readJsonFile(settingsPath);
-  if (settings === null || !Array.isArray(settings.instructions)) {
+  if (!isSettings(settings) || !Array.isArray(settings.instructions)) {
     return { path: settingsPath, ok: true, changed: false, settings: settings || {} };
   }
   const before = settings.instructions.length;
