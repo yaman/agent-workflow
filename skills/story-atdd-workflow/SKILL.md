@@ -17,8 +17,8 @@ db `${backlog.run_db}`, deploy `${deploy.deploy_command}` / smoke
 `${deploy.smoke_command}` over `${deploy.environments}`, traversal
 `${traversal.primary}` + `${traversal.fallback}`, acceptance `${acceptance.e2e}`
 + `${acceptance.contract}`. Read them from `workflow.config.toml` (or the
-machine default, or the documented defaults) per `references/configuration.md`
-in this skill's `references/configuration.md`. Never hardcode them.
+machine default, or the documented defaults) per this skill's
+`references/configuration.md`. Never hardcode them.
 
 ## When NOT to use
 

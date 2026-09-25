@@ -67,11 +67,11 @@ ONCE, before the workflow:
   brainstorming ──→ spec (design doc on disk)
                        │
                        ▼  story-atdd-workflow takes over
-  stories + ACs ───────┴────→ SurrealDB map db
+  stories + ACs + decisions ─┴────→ SurrealDB map db
 
-  THEN per story:
+  THEN per story:                                  ← outer repeat
        architect subagent  → tech_brief (files, seams, test locations)
-         └─ PER AC, one at a time, strictly serial:   ← the only repeat
+         └─ PER AC, one at a time, strictly serial:   ← inner repeat
               developer subagent   → acceptance test RED
                                    → layer-by-layer TDD GREEN
                                    → commit
