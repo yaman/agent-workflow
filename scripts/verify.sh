@@ -429,6 +429,21 @@ while IFS= read -r f; do
 done < <(find skills -path '*/references/tool-mapping.md')
 [ "$f32" = 0 ] && pass "no uncited shared-reference copies"
 
+echo "== 33. read-only agents never get write-capable tools =="
+# Render each read-only agent and assert its Claude tools allowlist contains no
+# write/edit/bash/agent tool (exact tokens, not substrings like TodoWrite).
+f33=0
+for a in architect code-reviewer qa; do
+  t=$(node install/install.mjs --host claude --print-agent "$a" 2>/dev/null | grep -E '^tools:' | sed 's/^tools: //')
+  [ -n "$t" ] || { bad "$a renders with no tools allowlist (would inherit all)"; f33=1; continue; }
+  for bad in Bash PowerShell Edit Write NotebookEdit Agent; do
+    if echo "$t" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | grep -qx "$bad"; then
+      bad "read-only agent $a is allowed $bad"; f33=1
+    fi
+  done
+done
+[ "$f33" = 0 ] && pass "read-only agents are write-incapable"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"
