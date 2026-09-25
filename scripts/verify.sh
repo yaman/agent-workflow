@@ -508,6 +508,20 @@ grep -q 'BASH_SOURCE' scripts/verify.sh || { bad "verify.sh does not resolve sym
 grep -q 'BASH_SOURCE' scripts/sync-references.sh || { bad "sync-references.sh does not resolve symlinks"; f37=1; }
 [ "$f37" = 0 ] && pass "symlink-safe path resolution in all three scripts"
 
+echo "== 38. a corrupt package fails loudly, not silently =="
+f38=0
+tmp38=$(mktemp -d)
+for missing in agents skills bootstrap/CHARTER.md; do
+  cp -r "$(pwd)" "$tmp38/broken" 2>/dev/null || true
+  ( cd "$tmp38/broken" && rm -rf "$missing" )
+  ( cd "$tmp38/broken" && node install/install.mjs --host claude --target "$tmp38/out" >/dev/null 2>&1 )
+  rc=$?
+  [ "$rc" = "1" ] || { bad "missing $missing did not fail (exit $rc)"; f38=1; }
+  rm -rf "$tmp38/broken" "$tmp38/out"
+done
+rm -rf "$tmp38"
+[ "$f38" = 0 ] && pass "missing package files fail with exit 1"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"

@@ -195,7 +195,19 @@ function planFor(h) {
   const agentsSrc = path.join(pkgRoot, "agents");
   const plan = [];
 
-  for (const { name, dir } of discoverSkills(skillsSrc)) {
+  // Package integrity: the installer must not silently install a partial pack
+  // (e.g. a corrupt checkout with no skills/ or agents/).
+  const skillsFound = discoverSkills(skillsSrc);
+  if (skillsFound.length === 0) {
+    console.error(`error: no skills found under ${skillsSrc} — is this a complete checkout?`);
+    process.exit(1);
+  }
+  if (!fs.existsSync(agentsSrc) || listFilesEnding(agentsSrc, ".md").length === 0) {
+    console.error(`error: no agent files found under ${agentsSrc} — is this a complete checkout?`);
+    process.exit(1);
+  }
+
+  for (const { name, dir } of skillsFound) {
     for (const rel of skillFiles(dir)) {
       plan.push({
         kind: "skill",
@@ -375,6 +387,10 @@ function runBootstrap(hosts) {
 
     console.log(`\n=== bootstrap: ${h} ===`);
     for (const [src, dst] of needs) {
+      if (!fs.existsSync(src)) {
+        console.error(`error: missing package file ${src} — is this a complete checkout?`);
+        process.exit(1);
+      }
       if (fs.existsSync(dst) && !force) { console.log(`  = ${path.relative(target, dst)} (present)`); continue; }
       console.log(`  + ${path.relative(target, dst)}`);
       if (apply) {
