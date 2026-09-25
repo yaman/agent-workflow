@@ -53,7 +53,9 @@ done
 pass "self-contained references"
 
 echo "== 5. python script tests =="
-if (cd skills/story-writing-council/scripts && python3 -m pytest -q >/tmp/opencode/aw-pytest.txt 2>&1); then
+# Run pytest with cache disabled and from a temp cwd so it never writes
+# __pycache__/.pytest_cache into the skill tree (which the installer would copy).
+if (cd skills/story-writing-council/scripts && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider >/tmp/opencode/aw-pytest.txt 2>&1); then
   pass "$(tail -1 /tmp/opencode/aw-pytest.txt)"
 else
   bad "script tests failed"; tail -5 /tmp/opencode/aw-pytest.txt
@@ -234,6 +236,19 @@ for d in skills/vendor/superpowers/*/; do
   fi
 done
 [ "$f21" = 0 ] && pass "all vendored skills carry the MIT notice"
+
+echo "== 22. installer never copies generated artifacts =="
+# The installer must exclude __pycache__/.pytest_cache/*.pyc even if a local test
+# run left them in the skill tree.
+f22=0
+mkdir -p skills/story-writing-council/scripts/__pycache__ skills/story-writing-council/scripts/.pytest_cache
+: > skills/story-writing-council/scripts/__pycache__/fake.cpython-999.pyc
+: > skills/story-writing-council/scripts/.pytest_cache/CACHEDIR.TAG
+if node install/install.mjs --host claude 2>/dev/null | grep -qE '__pycache__|\.pytest_cache|\.pyc'; then
+  bad "installer plans to copy generated artifacts"; f22=1
+fi
+rm -rf skills/story-writing-council/scripts/__pycache__ skills/story-writing-council/scripts/.pytest_cache
+[ "$f22" = 0 ] && pass "generated artifacts excluded from the install plan"
 
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi

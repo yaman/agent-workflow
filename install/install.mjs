@@ -136,11 +136,18 @@ function listFilesEnding(dir, ext) {
     .sort();
 }
 
-// Collect every file under a skill dir, relative to the skill dir.
+// Generated/tooling artifacts that must never be installed as skill content.
+const IGNORED_DIRS = new Set(["__pycache__", ".pytest_cache", "node_modules", ".git"]);
+const IGNORED_FILES = /\.(pyc|pyo)$/;
+
+// Collect every file under a skill dir, relative to the skill dir, skipping
+// generated artifacts (pytest/py caches) that a local test run may leave behind.
 function skillFiles(skillDir) {
   const out = [];
   const walk = (abs, rel) => {
     for (const e of fs.readdirSync(abs, { withFileTypes: true })) {
+      if (e.isDirectory() && IGNORED_DIRS.has(e.name)) continue;
+      if (e.isFile() && IGNORED_FILES.test(e.name)) continue;
       const a = path.join(abs, e.name);
       const r = rel ? path.join(rel, e.name) : e.name;
       if (e.isDirectory()) walk(a, r);
