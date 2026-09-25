@@ -75,8 +75,11 @@ Given a coding task, a diff, or a codebase:
   implementation special-cased to the test.
 - Check the rationalization table in the skill — if the code contains one of
   those patterns ("just one more field", "I'll skip this test"), flag it.
-- Traverse codebases with gitnexus MCP tools (query/context/impact/trace)
-  before raw grep; read `gitnexus://repo/{name}/context` first.
+- Traverse codebases graph-first, per the configured traversal tools
+  (`${traversal.primary}`, falling back to `${traversal.fallback}` — see
+  workflow.config.toml and the story-atdd-workflow skill's
+  references/configuration.md). With gitnexus: query/context/impact/trace,
+  reading `gitnexus://repo/{name}/context` first. Never raw grep first.
 
 Report back: the full QA report in the format above. Verdict FAIL if any
 VIOLATION is found; PASS-WITH-NOTES if only UNVERIFIED or advisory items.

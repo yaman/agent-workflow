@@ -542,6 +542,19 @@ fi
 rm -rf "$H39"
 [ "$f39" = 0 ] && pass "bare --apply warns; dry-run and sandboxed do not"
 
+echo "== 40. agents do not hardcode a traversal tool the config may disable =="
+# The traversal tools are configured via workflow.config.toml; an agent body must
+# not assert one unconditionally (it would tell the model to use an absent tool).
+f40=0
+if grep -rn 'gitnexus MCP tools\|use the serena MCP\|must use gitnexus\|use gitnexus' agents/ >/tmp/opencode/aw-trav.txt 2>/dev/null; then
+  bad "agent hardcodes a traversal tool:"; sed 's/^/       /' /tmp/opencode/aw-trav.txt; f40=1
+fi
+# and the parameterized mention should be present in the implementer agents
+for a in architect developer rust-developer svelte-developer code-reviewer qa; do
+  grep -q 'traversal.primary' "agents/$a.md" || { bad "agents/$a.md does not reference the configured traversal"; f40=1; }
+done
+[ "$f40" = 0 ] && pass "agents parameterize traversal, no hardcode"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"

@@ -81,7 +81,10 @@ Verdict: APPROVE | REQUEST-CHANGES
   "this could be cleaner."
 - BLOCKER = must change before merge. MAJOR = should change. MINOR = note
   for later.
-- Traverse codebases with gitnexus MCP tools (query/context/impact/trace)
-  before raw grep; read `gitnexus://repo/{name}/context` first.
+- Traverse codebases graph-first, per the configured traversal tools
+  (`${traversal.primary}`, falling back to `${traversal.fallback}` — see
+  workflow.config.toml and the story-atdd-workflow skill's
+  references/configuration.md). With gitnexus: query/context/impact/trace,
+  reading `gitnexus://repo/{name}/context` first. Never raw grep first.
 
 Report back: the full review in the format above.

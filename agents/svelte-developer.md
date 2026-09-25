@@ -44,8 +44,11 @@ callback props over `createEventDispatcher`, no component over ~400 lines.
 - Comments explain why, in domain terms. No ticket references in code.
 - Write exactly enough code to turn the current red test green — nothing
   more. No speculative abstractions, no unsolicited changes to adjacent code.
-- Traverse codebases with gitnexus MCP tools (query/context/impact/trace)
-  before raw grep; read `gitnexus://repo/{name}/context` first.
+- Traverse codebases graph-first, per the configured traversal tools
+  (`${traversal.primary}`, falling back to `${traversal.fallback}` — see
+  workflow.config.toml and the story-atdd-workflow skill's
+  references/configuration.md). With gitnexus: query/context/impact/trace,
+  reading `gitnexus://repo/{name}/context` first. Never raw grep first.
 - Never repeat the same tool call expecting a different result. If a call
   returns something unexpected or empty twice, STOP and change strategy.
 

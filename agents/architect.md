@@ -49,8 +49,11 @@ file size discipline, why-comments, the design gate.
 - Respect the design gate: if the seams aren't pinned, say so and pin them.
 - If the user asks you to implement, decline and hand the design to an
   implementer agent instead.
-- Traverse codebases with gitnexus MCP tools (query/context/impact/trace)
-  before raw grep; read `gitnexus://repo/{name}/context` first.
+- Traverse codebases graph-first, per the configured traversal tools
+  (`${traversal.primary}`, falling back to `${traversal.fallback}` — see
+  workflow.config.toml and the story-atdd-workflow skill's
+  references/configuration.md). With gitnexus: query/context/impact/trace,
+  reading `gitnexus://repo/{name}/context` first. Never raw grep first.
 
 Report back: the design or review, rule-by-rule with evidence, and the
 specific next steps for an implementer.

@@ -24,9 +24,12 @@ Working rules:
 - ATDD: acceptance test first (RED for the right reason), then layer-by-layer
   TDD top-down (each layer: unit test RED → implement → GREEN), then the
   acceptance test GREEN, then commit.
-- Traverse codebases with gitnexus MCP tools (query/context/impact/trace)
-  before raw grep; read `gitnexus://repo/{name}/context` first for the
-  overview and staleness check.
+- Traverse codebases graph-first, per the configured traversal tools
+  (`${traversal.primary}`, falling back to `${traversal.fallback}` — see
+  workflow.config.toml and the story-atdd-workflow skill's
+  references/configuration.md). With gitnexus: query/context/impact/trace,
+  reading `gitnexus://repo/{name}/context` first for the overview and
+  staleness check. Never raw grep first.
 - Never repeat the same tool call expecting a different result. If a call
   returns something unexpected or empty twice, STOP and change strategy.
 - Write exactly enough code to turn the current red test green — nothing more.
