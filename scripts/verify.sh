@@ -2,7 +2,15 @@
 # verify.sh — prove the pack is project-agnostic and installs cleanly.
 # Run from the repo root. Exits non-zero on any failure.
 set -uo pipefail
-cd "$(dirname "$0")/.." || exit 1
+# Resolve this script's real directory, following symlinks, so the suite works
+# when invoked via a symlink or from any cwd.
+_src="${BASH_SOURCE[0]}"
+while [ -L "$_src" ]; do
+  _dir="$(cd -P "$(dirname "$_src")" && pwd)"
+  _src="$(readlink "$_src")"
+  case "$_src" in /*) ;; *) _src="$_dir/$_src" ;; esac
+done
+cd "$(cd -P "$(dirname "$_src")" && pwd)/.." || exit 1
 
 fail=0
 pass() { printf '  ok   %s\n' "$1"; }
@@ -484,6 +492,21 @@ for a in agents/*.md; do
   if [ -n "$hits" ]; then bad "read-only agent '$name' is the actor of a write"; printf '%s\n' "$hits" | sed 's/^/       /'; f36=1; fi
 done
 [ "$f36" = 0 ] && pass "no read-only agent is the actor of a write"
+
+echo "== 37. scripts resolve their real location via symlink =="
+# Invoke the hook through a symlink only — do NOT re-run verify.sh here, which
+# would recurse the whole suite. A tiny probe of the path-resolution logic is
+# enough: the hook must find CHARTER.md through a symlinked path.
+f37=0
+ln -sf "$(pwd)/hooks/session-start.sh" /tmp/aw-hlink.sh
+d37=$(mktemp -d); : > "$d37/workflow.config.toml"
+n=$(CLAUDE_PROJECT_DIR="$d37" bash /tmp/aw-hlink.sh 2>/dev/null | wc -c)
+[ "$n" -gt 0 ] || { bad "hook fails when symlinked (cannot resolve its real dir)"; f37=1; }
+rm -rf "$d37" /tmp/aw-hlink.sh
+# and the scripts must share the same resolution idiom
+grep -q 'BASH_SOURCE' scripts/verify.sh || { bad "verify.sh does not resolve symlinks"; f37=1; }
+grep -q 'BASH_SOURCE' scripts/sync-references.sh || { bad "sync-references.sh does not resolve symlinks"; f37=1; }
+[ "$f37" = 0 ] && pass "symlink-safe path resolution in all three scripts"
 
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi

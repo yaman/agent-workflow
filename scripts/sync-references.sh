@@ -4,7 +4,14 @@
 # on disk for `npx skills` and for a plain directory install; this script keeps
 # them from drifting. Run after editing references/*.md.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+# Resolve this script's real directory, following symlinks.
+_src="${BASH_SOURCE[0]}"
+while [ -L "$_src" ]; do
+  _dir="$(cd -P "$(dirname "$_src")" && pwd)"
+  _src="$(readlink "$_src")"
+  case "$_src" in /*) ;; *) _src="$_dir/$_src" ;; esac
+done
+cd "$(cd -P "$(dirname "$_src")" && pwd)/.."
 
 # Shared files, and the skills that must carry each. A skill carries a copy only
 # if it uses the concept: every writer of SurrealDB state needs configuration.md;

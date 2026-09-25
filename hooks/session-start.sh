@@ -11,7 +11,15 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Resolve the hook's real directory, following symlinks (a plugin dir may be
+# symlinked), then the plugin root that holds CHARTER.md.
+_src="${BASH_SOURCE[0]}"
+while [ -L "$_src" ]; do
+  _d="$(cd -P "$(dirname "$_src")" && pwd)"
+  _src="$(readlink "$_src")"
+  case "$_src" in /*) ;; *) _src="$_d/$_src" ;; esac
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$_src")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # The charter lives at bootstrap/CHARTER.md in the repo and may sit beside the
 # hook once installed; accept either.
