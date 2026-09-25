@@ -406,6 +406,14 @@ done < <(find skills -type f -name '*.sh' -perm -u+x)
 rm -rf "$T30"
 [ "$f30" = 0 ] && pass "executable scripts stay executable after install"
 
+echo "== 31. agents named as 'agent: X' in skills must exist in agents/ =="
+f31=0
+for name in $(grep -rhoE 'agent: `[a-z-]+`' skills/story-atdd-workflow/ bootstrap/ 2>/dev/null \
+              | grep -oE '`[a-z-]+`' | tr -d '`' | sort -u); do
+  [ -f "agents/$name.md" ] || { bad "skill names an agent that does not ship: $name"; f31=1; }
+done
+[ "$f31" = 0 ] && pass "every named agent exists"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"
