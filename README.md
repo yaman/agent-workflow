@@ -1,8 +1,9 @@
 # agent-workflow
 
-A workflow pack for AI coding agents: **six skills and six subagents** that run
-a story-driven, acceptance-test-driven development process on a SurrealDB
-backlog. One canonical source tree installs into **opencode** and **Claude Code**.
+A workflow pack for AI coding agents: **thirteen skills and six subagents** that
+run a story-driven, acceptance-test-driven development process on a SurrealDB
+backlog. One canonical source tree installs into **opencode** and **Claude Code**
+— add this one repo and you have the full workflow.
 
 It exists to make an agent hold a strict workflow when the work gets
 complicated — write the failing acceptance test first, build one acceptance
@@ -94,6 +95,9 @@ The two backlog skills are alternatives — a project uses **one**, selected by
 
 ### Skills
 
+The six workflow skills are this project's own — project-agnostic, and the
+reason the pack exists:
+
 | Skill | Role |
 |---|---|
 | `story-atdd-workflow` | The core loop (above). The `two-db` backlog model. |
@@ -102,6 +106,19 @@ The two backlog skills are alternatives — a project uses **one**, selected by
 | `wisdom-council` | N-expert parallel council for consequential design/architecture decisions — independent lenses, adjudicated divergences, MUST-FIX list. |
 | `data-science-council` | Ten-persona council for statistical, causal, and learning claims or experiment configs. |
 | `product-verification-council` | Ten-persona council that verifies a product/feature/release from independent lenses (architecture, QA, devops, UX, a11y, security, …). |
+
+Plus **seven lifecycle skills vendored from [obra/superpowers](https://github.com/obra/superpowers)**
+(MIT) under `skills/vendor/` — the pieces the core loop calls into:
+`brainstorming`, `finishing-a-development-branch`, `systematic-debugging`,
+`verification-before-completion`, `requesting-code-review`,
+`receiving-code-review`, `using-git-worktrees`.
+
+Four superpowers skills are **deliberately excluded** because they contradict
+this pack's model — `test-driven-development`, `writing-plans`,
+`executing-plans`, `subagent-driven-development` (this pack replaces all four).
+`scripts/verify.sh` asserts they never appear, and
+[`skills/vendor/VENDORED.md`](skills/vendor/VENDORED.md) records provenance and
+every local patch.
 
 ### Agents
 
@@ -134,7 +151,7 @@ translation, including the tool-name mapping used in skill prose.
 ### Via the `skills` CLI (skills only)
 
 ```bash
-npx skills add yaman/agent-workflow --list        # show the 6 skills
+npx skills add yaman/agent-workflow --list        # show all skills
 npx skills add yaman/agent-workflow --all -g      # install all, globally
 npx skills add yaman/agent-workflow -g -s story-atdd-workflow
 ```
@@ -168,7 +185,7 @@ Uninstall by deleting the installed files (the installer never touches anything
 outside its target):
 
 ```bash
-rm -rf ~/.claude/skills/{story-atdd-workflow,story-writing-council,architecture-rules,wisdom-council,data-science-council,product-verification-council}
+rm -rf ~/.claude/skills/{story-atdd-workflow,story-writing-council,architecture-rules,wisdom-council,data-science-council,product-verification-council,brainstorming,finishing-a-development-branch,systematic-debugging,verification-before-completion,requesting-code-review,receiving-code-review,using-git-worktrees}
 rm -f  ~/.claude/agents/{architect,developer,rust-developer,svelte-developer,code-reviewer,qa}.md
 # opencode: the same paths under ~/.config/opencode/
 # npx skills: npx skills remove
@@ -179,7 +196,8 @@ rm -f  ~/.claude/agents/{architect,developer,rust-developer,svelte-developer,cod
 The pack is **generic**. It does not include third-party or machine-specific
 skills (Orca, ponytail, gitnexus, OpenKnowledge, ui-ux-pro-max, …), and it does
 not include the `search`/`deep-research` agents, which pin a provider-specific
-model. Vendor those separately.
+model. Vendor those separately. The seven vendored superpowers lifecycle skills
+are the deliberate exception — the workflow's spine calls into them.
 
 The council skills optionally record verdicts to SurrealDB, only when you ask;
 the destination resolves from `[verdict_destinations]` or `[backlog]` in the

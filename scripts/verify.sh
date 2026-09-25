@@ -14,12 +14,12 @@ HARD='nemesis|canavar|FORGE_|dev\.sh|opencode-go|/home/|revchief|riskchief|codec
 # 'forge' with a trailing non-letter, so 'forget'/'fire-and-forget' don't match.
 SOFT='(^|[^a-z])forge([^a-z]|$)|iteration_map'
 fail1=0
-GREP='grep -rniI --exclude-dir=__pycache__ --exclude=*.pyc'
+GREP='grep -rniI --exclude-dir=__pycache__ --exclude-dir=vendor --exclude=*.pyc'
 if $GREP -E "$HARD" skills/ agents/ 2>/dev/null >/tmp/opencode/aw-coupling.txt; then
   bad "hard coupling tokens found:"; sed 's/^/       /' /tmp/opencode/aw-coupling.txt; fail1=1
 fi
-# The configuration docs legitimately name the default values; exclude them from
-# the soft scan, but scan everything else.
+# The configuration docs legitimately name the default values, and skills/vendor/
+# is third-party text (not ours to police); both are excluded from the soft scan.
 if $GREP -E "$SOFT" skills/ agents/ 2>/dev/null \
    | grep -vE '/configuration.md:|default `iteration_map`|default `iteration`' >/tmp/opencode/aw-coupling2.txt; then
   bad "soft coupling tokens found:"; sed 's/^/       /' /tmp/opencode/aw-coupling2.txt; fail1=1
@@ -27,16 +27,15 @@ fi
 [ "$fail1" = 0 ] && pass "no coupling tokens"
 
 echo "== 2. every skill has valid frontmatter (name + description) =="
-f2=0
-for d in skills/*/; do
-  f="$d/SKILL.md"
-  if [ ! -f "$f" ]; then bad "missing SKILL.md: $d"; f2=1; continue; fi
+f2=0; n2=0
+while IFS= read -r f; do
+  n2=$((n2+1))
   first=$(head -1 "$f")
-  [ "$first" = "---" ] || { bad "no opening frontmatter: $d"; f2=1; continue; }
-  grep -qE '^name:\s*\S' "$f"        || { bad "no name: $d"; f2=1; }
-  grep -qE '^description:\s*\S' "$f" || { bad "no description: $d"; f2=1; }
-done
-[ "$f2" = 0 ] && pass "6 skills have name + description"
+  [ "$first" = "---" ] || { bad "no opening frontmatter: $f"; f2=1; continue; }
+  grep -qE '^name:\s*\S' "$f"        || { bad "no name: $f"; f2=1; }
+  grep -qE '^description:\s*\S' "$f" || { bad "no description: $f"; f2=1; }
+done < <(find skills -name SKILL.md | sort)
+[ "$f2" = 0 ] && pass "$n2 skills have name + description"
 
 echo "== 3. every agent has description frontmatter =="
 f3=0
@@ -101,6 +100,31 @@ for a in agents/*.md; do
   esac
 done
 [ "$f9" = 0 ] && pass "all descriptions are quoted or colon-free"
+
+echo "== 10. conflict skills are NOT in the pack =="
+# Superpowers' TDD/plans/SDD skills contradict this pack's ATDD model and must
+# be excluded (documented in skills/vendor/VENDORED.md).
+f10=0
+for c in test-driven-development writing-plans executing-plans subagent-driven-development; do
+  if find skills -type d -name "$c" | grep -q .; then bad "conflict skill present: $c"; f10=1; fi
+done
+[ "$f10" = 0 ] && pass "no conflicting upstream skills"
+
+echo "== 11. vendored skills carry provenance =="
+if [ -f skills/vendor/VENDORED.md ] \
+   && grep -q 'obra/superpowers' skills/vendor/VENDORED.md \
+   && grep -q 'MIT' skills/vendor/VENDORED.md; then
+  pass "VENDORED.md records source, commit, license"
+else
+  bad "VENDORED.md missing provenance"
+fi
+
+echo "== 12. installer discovers vendored skills (flat) =="
+if node install/install.mjs --host claude 2>/dev/null | grep -q 'skills/brainstorming/SKILL.md'; then
+  pass "vendored brainstorming installs flat to skills/brainstorming"
+else
+  bad "installer does not flatten vendored skills"
+fi
 
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi

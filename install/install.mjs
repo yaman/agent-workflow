@@ -153,18 +153,46 @@ function skillFiles(skillDir) {
   return out.sort();
 }
 
+// Discover every skill directory under skills/ (including skills/vendor/<pack>/<skill>/)
+// by finding directories that directly contain a SKILL.md. Returns
+// { name, dir } where name is the skill's own directory name (vending must
+// install flat — hosts scan immediate subdirectories of their skills dir).
+function discoverSkills(skillsSrc, maxDepth = 4) {
+  const found = [];
+  const walk = (abs, depth) => {
+    if (depth > maxDepth) return;
+    let entries;
+    try {
+      entries = fs.readdirSync(abs, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    const hasSkillMd = entries.some((e) => e.isFile() && e.name === "SKILL.md");
+    if (hasSkillMd) {
+      // A directory containing SKILL.md is one skill; its children are its files.
+      found.push({ name: path.basename(abs), dir: abs });
+      return;
+    }
+    for (const e of entries) {
+      if (e.isDirectory()) walk(path.join(abs, e.name), depth + 1);
+    }
+  };
+  walk(skillsSrc, 0);
+  return found.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 function planFor(h) {
   const target = resolveTarget(h);
   const skillsSrc = path.join(pkgRoot, "skills");
   const agentsSrc = path.join(pkgRoot, "agents");
   const plan = [];
 
-  for (const skill of listDirs(skillsSrc)) {
-    for (const rel of skillFiles(path.join(skillsSrc, skill))) {
+  for (const { name, dir } of discoverSkills(skillsSrc)) {
+    for (const rel of skillFiles(dir)) {
       plan.push({
         kind: "skill",
-        src: path.join(skillsSrc, skill, rel),
-        dst: path.join(target, "skills", skill, rel),
+        src: path.join(dir, rel),
+        dst: path.join(target, "skills", name, rel),
       });
     }
   }
