@@ -465,6 +465,26 @@ t=$(node install/install.mjs --host claude --target=/tmp/aw-eq-check 2>/dev/null
 [ "${t:-0}" -ge 1 ] || { bad "--target=DIR not accepted"; f35=1; }
 [ "$f35" = 0 ] && pass "both --flag=value and --flag value forms work"
 
+echo "== 36. read-only agents are never the actor of a write =="
+# A read-only agent (edit: deny) must not be the grammatical actor of a mutating
+# command. Heuristic: the agent name immediately followed (within a short span,
+# no other actor word between) by a mutating verb. Mere mention ("the architect
+# is read-only; the coordinator stores it") must not trip it.
+f36=0
+for a in agents/*.md; do
+  grep -qE '^  edit: (deny|ask)' "$a" || continue
+  name=$(grep -m1 '^name:' "$a" 2>/dev/null | sed 's/name: *//')
+  [ -n "$name" ] || name=$(basename "$a" .md)
+  # patterns that make the agent the writer, e.g. "architect: UPDATE", "architect writes",
+  # "architect runs the commit", "have the architect store"
+  pat="(${name}[^.]{0,25}(UPDATE|CREATE|writes?|stores?|commits?|runs the commit))"
+  hits=$(awk 'BEGIN{n=0} /^---$/{n++; next} n>=2' skills/story-atdd-workflow/SKILL.md \
+         | grep -iE "$pat" \
+         | grep -viE 'coordinator|is read-only|cannot write' || true)
+  if [ -n "$hits" ]; then bad "read-only agent '$name' is the actor of a write"; printf '%s\n' "$hits" | sed 's/^/       /'; f36=1; fi
+done
+[ "$f36" = 0 ] && pass "no read-only agent is the actor of a write"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"

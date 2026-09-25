@@ -119,13 +119,13 @@ At story pickup, BEFORE any implementation:
 
 - Dispatch the `architect` subagent (isolated context: the story + its ACs + the project's `decision` rows). It never implements (its permissions are read-only).
 - **Codebase traversal is graph-first, symbols fallback — never raw grep.** When `${traversal.primary}` is `gitnexus`, the architect uses the gitnexus MCP tools (`query`, `context`, `impact`, `trace`, `cypher`) — read `gitnexus://repo/{name}/context` first for the overview + staleness check, and re-analyze if the index is stale. When the graph does not resolve a symbol-level question (exact definition, references, diagnostics), and `${traversal.fallback}` is `serena`, use the serena MCP by project name: `activate_project <name>` first, then `find_symbol`/`find_referencing_symbols`/`get_symbols_overview`. Raw grep is only for confirming exact strings/line numbers after a graph/symbol tool has located the symbols. If `${traversal.primary}` is `none`, fall back to glob/grep and say so in the report — never pretend a graph was consulted. The repos to index are the project's own repos under `${project.name}`.
-- Deliverable: **tech_brief** — one document, a section per AC, pinning:
+- Deliverable: **tech_brief** — the architect *returns* one document (it cannot write: its permissions are read-only), a section per AC, pinning:
   - files to create/modify (exact paths), grouped per clean architecture layer (frontend presentation/application/domain/infrastructure; backend delivery/application/domain/infrastructure),
   - function/method signatures and the ports/interfaces each layer exposes,
   - the test seam per layer (how the layer under test is driven, with its inner unit test),
   - the acceptance test's location/harness (`${acceptance.e2e}`),
   - the contract at the frontend→backend seam (`${acceptance.contract}`): the consumer test's location, the contract's expected request/response shape (path, method, body, status, response fields), and the provider test's location.
-- Store the brief WITH the story: `UPDATE story:<slug> SET tech_brief = <brief>;` in the map db (`${backlog.map_db}`). It is the evidence — "why was it built this way" is answered by the approved brief.
+- **The coordinator stores it** (the architect is read-only): `UPDATE story:<slug> SET tech_brief = <brief>;` in the map db (`${backlog.map_db}`). It is the evidence — "why was it built this way" is answered by the approved brief.
 - One architect per story (a 3-AC story sharing one slice needs no three briefings); the brief is per-AC sections.
 
 ## Step 4 — Per-AC vertical execution (STRICTLY SERIAL, one subagent per AC cycle)
