@@ -392,6 +392,20 @@ while IFS= read -r sk; do
 done < <(find skills -name SKILL.md)
 [ "$f29" = 0 ] && pass "all skill-internal references resolve"
 
+echo "== 30. installer preserves source executable bits =="
+f30=0
+T30=$(mktemp -d)
+node install/install.mjs --host claude --target "$T30" --apply >/dev/null 2>&1
+while IFS= read -r src; do
+  base=$(echo "$src" | sed -E 's|^skills/(vendor/superpowers/)?([^/]+)/.*|\2|')
+  rel=$(echo "$src" | sed -E 's|^skills/(vendor/superpowers/)?[^/]+/||')
+  dst="$T30/skills/$base/$rel"
+  if [ -x "$src" ] && [ ! -x "$dst" ]; then bad "exec bit lost: $base/$rel"; f30=1; fi
+  if [ ! -x "$src" ] && [ -x "$dst" ]; then bad "unexpected exec bit: $base/$rel"; f30=1; fi
+done < <(find skills -type f -name '*.sh' -perm -u+x)
+rm -rf "$T30"
+[ "$f30" = 0 ] && pass "executable scripts stay executable after install"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"

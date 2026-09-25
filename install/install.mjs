@@ -316,10 +316,12 @@ function unplanOpencodeBootstrap(target, charterPath) {
 }
 
 // Write a file, or fail with a clean message instead of an exception trace.
-function writeOrFail(dst, content) {
+// `mode` optionally sets the permission bits (e.g. 0o755 for scripts).
+function writeOrFail(dst, content, mode) {
   try {
     fs.mkdirSync(path.dirname(dst), { recursive: true });
     fs.writeFileSync(dst, content);
+    if (mode !== undefined) fs.chmodSync(dst, mode);
     return true;
   } catch (e) {
     console.error(`\nerror: cannot write ${dst}\n       ${e.code || ""} ${e.message}`.trimEnd());
@@ -328,6 +330,15 @@ function writeOrFail(dst, content) {
         ` existing files are skipped unless --force.`
     );
     process.exit(1);
+  }
+}
+
+// Source permission bits, so executable scripts stay executable after install.
+function sourceMode(src) {
+  try {
+    return fs.statSync(src).mode & 0o777;
+  } catch {
+    return undefined;
   }
 }
 
@@ -432,7 +443,11 @@ function run() {
       }
       console.log(`  + ${label}`);
       wrote++;
-      if (apply) writeOrFail(item.dst, content);
+      if (apply) {
+        // Preserve source exec bits for scripts; rendered agents are plain files.
+        const mode = item.kind === "skill" ? sourceMode(item.src) : undefined;
+        writeOrFail(item.dst, content, mode);
+      }
     }
   }
 
