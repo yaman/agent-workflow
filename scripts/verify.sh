@@ -5,6 +5,8 @@
 # frontmatter/placeholder/strict-YAML checks). Without python3 those checks fail
 # — run verify.sh on a dev machine that has it.
 set -uo pipefail
+SCRATCH="$(mktemp -d)"
+trap 'rm -rf "$SCRATCH"' EXIT
 # Resolve this script's real directory, following symlinks, so the suite works
 # when invoked via a symlink or from any cwd.
 _src="${BASH_SOURCE[0]}"
@@ -26,14 +28,14 @@ HARD='nemesis|canavar|FORGE_|dev\.sh|opencode-go|/home/|revchief|riskchief|codec
 SOFT='(^|[^a-z])forge([^a-z]|$)|iteration_map'
 fail1=0
 GREP='grep -rniI --exclude-dir=__pycache__ --exclude-dir=vendor --exclude=*.pyc'
-if $GREP -E "$HARD" skills/ agents/ 2>/dev/null >/tmp/opencode/aw-coupling.txt; then
-  bad "hard coupling tokens found:"; sed 's/^/       /' /tmp/opencode/aw-coupling.txt; fail1=1
+if $GREP -E "$HARD" skills/ agents/ 2>/dev/null >"$SCRATCH"/aw-coupling.txt; then
+  bad "hard coupling tokens found:"; sed 's/^/       /' "$SCRATCH"/aw-coupling.txt; fail1=1
 fi
 # The configuration docs legitimately name the default values, and skills/vendor/
 # is third-party text (not ours to police); both are excluded from the soft scan.
 if $GREP -E "$SOFT" skills/ agents/ 2>/dev/null \
-   | grep -vE '/configuration.md:|default `iteration_map`|default `iteration`' >/tmp/opencode/aw-coupling2.txt; then
-  bad "soft coupling tokens found:"; sed 's/^/       /' /tmp/opencode/aw-coupling2.txt; fail1=1
+   | grep -vE '/configuration.md:|default `iteration_map`|default `iteration`' >"$SCRATCH"/aw-coupling2.txt; then
+  bad "soft coupling tokens found:"; sed 's/^/       /' "$SCRATCH"/aw-coupling2.txt; fail1=1
 fi
 [ "$fail1" = 0 ] && pass "no coupling tokens"
 
@@ -66,17 +68,17 @@ pass "self-contained references"
 echo "== 5. python script tests =="
 # Run pytest with cache disabled and from a temp cwd so it never writes
 # __pycache__/.pytest_cache into the skill tree (which the installer would copy).
-if (cd skills/story-writing-council/scripts && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider >/tmp/opencode/aw-pytest.txt 2>&1); then
-  pass "$(tail -1 /tmp/opencode/aw-pytest.txt)"
+if (cd skills/story-writing-council/scripts && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider >"$SCRATCH"/aw-pytest.txt 2>&1); then
+  pass "$(tail -1 "$SCRATCH"/aw-pytest.txt)"
 else
-  bad "script tests failed"; tail -5 /tmp/opencode/aw-pytest.txt
+  bad "script tests failed"; tail -5 "$SCRATCH"/aw-pytest.txt
 fi
 
 echo "== 6. installer dry-run, both hosts =="
-if node install/install.mjs --host both >/tmp/opencode/aw-install.txt 2>&1; then
-  pass "installer ran: $(grep -c '^  +' /tmp/opencode/aw-install.txt) files planned"
+if node install/install.mjs --host both >"$SCRATCH"/aw-install.txt 2>&1; then
+  pass "installer ran: $(grep -c '^  +' "$SCRATCH"/aw-install.txt) files planned"
 else
-  bad "installer failed"; tail -5 /tmp/opencode/aw-install.txt
+  bad "installer failed"; tail -5 "$SCRATCH"/aw-install.txt
 fi
 
 echo "== 7. installer renders Claude agents (no opencode-only fields) =="
@@ -215,8 +217,8 @@ echo "== 19. no skill-internal citation breaks when installed flat =="
 # Inside a skill dir, a citation must be relative to the skill root, never
 # repo-root-relative (`skills/<name>/...`), which breaks after a flat install.
 f19=0
-if grep -rn '`skills/[a-z0-9-]*/' skills/*/ 2>/dev/null | grep -v '/vendor/VENDORED.md' >/tmp/opencode/aw-flat.txt; then
-  bad "repo-root-relative cite inside a skill:"; sed 's/^/       /' /tmp/opencode/aw-flat.txt; f19=1
+if grep -rn '`skills/[a-z0-9-]*/' skills/*/ 2>/dev/null | grep -v '/vendor/VENDORED.md' >"$SCRATCH"/aw-flat.txt; then
+  bad "repo-root-relative cite inside a skill:"; sed 's/^/       /' "$SCRATCH"/aw-flat.txt; f19=1
 fi
 [ "$f19" = 0 ] && pass "skill citations are skill-relative"
 
@@ -265,12 +267,12 @@ echo "== 23. installer fails cleanly on an unwritable target =="
 # A write error must be a one-line message + exit 1, not an unhandled stack trace.
 f23=0
 T23=$(mktemp -d); chmod 500 "$T23"
-node install/install.mjs --host claude --target "$T23/sub" --apply >/dev/null 2>/tmp/opencode/aw-ro.err
+node install/install.mjs --host claude --target "$T23/sub" --apply >/dev/null 2>"$SCRATCH"/aw-ro.err
 rc=$?
 chmod 700 "$T23"; rm -rf "$T23"
 [ "$rc" = "1" ] || { bad "expected exit 1 on unwritable target, got $rc"; f23=1; }
-grep -q '^error: cannot write' /tmp/opencode/aw-ro.err || { bad "no clean error message"; f23=1; }
-grep -q 'Node.js v' /tmp/opencode/aw-ro.err && { bad "stack trace leaked to stderr"; f23=1; }
+grep -q '^error: cannot write' "$SCRATCH"/aw-ro.err || { bad "no clean error message"; f23=1; }
+grep -q 'Node.js v' "$SCRATCH"/aw-ro.err && { bad "stack trace leaked to stderr"; f23=1; }
 [ "$f23" = 0 ] && pass "clean error + exit 1, no stack trace"
 
 echo "== 24. JSONC config is declined with an actionable message (never corrupted) =="
@@ -549,8 +551,8 @@ echo "== 40. agents do not hardcode a traversal tool the config may disable =="
 # The traversal tools are configured via workflow.config.toml; an agent body must
 # not assert one unconditionally (it would tell the model to use an absent tool).
 f40=0
-if grep -rn 'gitnexus MCP tools\|use the serena MCP\|must use gitnexus\|use gitnexus' agents/ >/tmp/opencode/aw-trav.txt 2>/dev/null; then
-  bad "agent hardcodes a traversal tool:"; sed 's/^/       /' /tmp/opencode/aw-trav.txt; f40=1
+if grep -rn 'gitnexus MCP tools\|use the serena MCP\|must use gitnexus\|use gitnexus' agents/ >"$SCRATCH"/aw-trav.txt 2>/dev/null; then
+  bad "agent hardcodes a traversal tool:"; sed 's/^/       /' "$SCRATCH"/aw-trav.txt; f40=1
 fi
 # and the parameterized mention should be present in the implementer agents
 for a in architect developer rust-developer svelte-developer code-reviewer qa; do
@@ -569,9 +571,9 @@ rm -rf "$H41"
 # array / scalar: declined with a message, no crash, file intact
 for val in '[]' '"hello"' '42'; do
   H41=$(mktemp -d); mkdir -p "$H41/.claude"; printf '%s' "$val" > "$H41/.claude/settings.json"
-  HOME="$H41" node install/install.mjs --host claude --apply >/tmp/opencode/aw-o.txt 2>/tmp/opencode/aw-e.txt
+  HOME="$H41" node install/install.mjs --host claude --apply >"$SCRATCH"/aw-o.txt 2>"$SCRATCH"/aw-e.txt
   rc=$?
-  grep -q 'TypeError\|SyntaxError' /tmp/opencode/aw-e.txt && { bad "crash on settings.json=$val"; f41=1; }
+  grep -q 'TypeError\|SyntaxError' "$SCRATCH"/aw-e.txt && { bad "crash on settings.json=$val"; f41=1; }
   [ "$(cat "$H41/.claude/settings.json")" = "$val" ] || { bad "settings.json=$val was modified"; f41=1; }
   [ "$rc" = "0" ] || { bad "nonzero exit on settings.json=$val"; f41=1; }
   rm -rf "$H41"
