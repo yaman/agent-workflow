@@ -273,6 +273,102 @@ grep -q '// user comment' "$T24/opencode.jsonc" || { bad "installer modified/cor
 rm -rf "$T24"
 [ "$f24" = 0 ] && pass "JSONC left intact with an actionable message"
 
+echo "== 25. AGENT_WORKFLOW falsy values disable the gate =="
+f25=0
+T25=$(mktemp -d)   # no workflow.config.toml here
+for v in 0 false no off; do
+  out=$(CLAUDE_PROJECT_DIR="$T25" AGENT_WORKFLOW="$v" bash hooks/session-start.sh)
+  [ -z "$out" ] || { bad "AGENT_WORKFLOW=$v did NOT disable the gate"; f25=1; }
+done
+for v in 1 true yes; do
+  out=$(CLAUDE_PROJECT_DIR="$T25" AGENT_WORKFLOW="$v" bash hooks/session-start.sh)
+  [ -n "$out" ] || { bad "AGENT_WORKFLOW=$v did NOT enable the gate"; f25=1; }
+done
+rm -rf "$T25"
+[ "$f25" = 0 ] && pass "0/false/no/off disable; 1/true/yes enable"
+
+echo "== 26. strict YAML: every rendered agent + skill frontmatter parses =="
+if python3 -c "import yaml" >/dev/null 2>&1; then
+  f26=0
+  T26=$(mktemp -d)
+  node install/install.mjs --host claude --target "$T26" --apply >/dev/null 2>&1
+  out=$(python3 - "$T26" 2>&1 <<'PY'
+import sys,glob,yaml,re
+tgt=sys.argv[1]; bad=[]
+try:
+    for p in sorted(glob.glob(tgt+'/agents/*.md')):
+        t=open(p,encoding='utf-8').read()
+        m=re.match(r'^---\r?\n(.*?)\r?\n---\r?\n',t,re.S)
+        if not m: bad.append('no fm: '+p); continue
+        d=yaml.safe_load(m.group(1))
+        if not d.get('name') or not d.get('description'): bad.append('missing field: '+p)
+        if any(k in d for k in ('steps','permission','mode')): bad.append('opencode field leaked: '+p)
+    for p in glob.glob('skills/**/SKILL.md',recursive=True):
+        t=open(p,encoding='utf-8').read()
+        m=re.match(r'^---\r?\n(.*?)\r?\n---\r?\n',t,re.S)
+        if not m: bad.append('no fm: '+p); continue
+        d=yaml.safe_load(m.group(1))
+        if not isinstance(d,dict) or not d.get('name'): bad.append('bad fm: '+p)
+except Exception as e:
+    bad.append('parse error: %s' % e)
+print('\n'.join(bad))
+PY
+)
+  rm -rf "$T26"
+  if [ -n "$out" ]; then bad "strict YAML issues:"; printf '%s\n' "$out" | sed 's/^/       /'; f26=1; fi
+  [ "$f26" = 0 ] && pass "all agent + skill frontmatter parses under strict YAML"
+else
+  pass "pyyaml not installed — skipped"
+fi
+
+echo "== 27. every config placeholder is documented and used (no drift) =="
+if python3 -c "import yaml" >/dev/null 2>&1; then
+  f27=0
+  out=$(python3 - <<'PY' 2>&1
+import re, glob, tomllib
+used = set()
+for p in (glob.glob('skills/**/*.md', recursive=True)
+          + ['bootstrap/CHARTER.md', 'references/configuration.md']):
+    if '/vendor/' in p:
+        continue
+    used |= set(re.findall(r'\$\{([a-z0-9_.]+)\}', open(p, encoding='utf-8').read()))
+cfg = tomllib.load(open('workflow.config.example.toml', 'rb'))
+def flat(d, pre=''):
+    out = set()
+    for k, v in d.items():
+        out |= flat(v, pre + k + '.') if isinstance(v, dict) else {pre + k}
+    return out
+keys = flat(cfg)
+# a placeholder may name a map key (e.g. ${deploy.base_urls}) while the example
+# defines its entries (deploy.base_urls.dev); accept the map name too
+extra = set()
+for k in list(keys):
+    parts = k.split('.')
+    for i in range(1, len(parts)):
+        extra.add('.'.join(parts[:i]))
+keys |= extra
+# base_url/env are template placeholders inside deploy commands, not config keys
+ignore = {'base_url', 'env'}
+problems = []
+problems += ['used-not-in-example: ' + k for k in sorted(used - keys - ignore)]
+# a leaf key is "used" if it, or any ancestor prefix (a map it belongs to), is used
+def is_used(k):
+    parts = k.split('.')
+    return any('.'.join(parts[:i]) in used for i in range(1, len(parts) + 1))
+problems += ['in-example-not-used: ' + k for k in sorted(keys - extra) if not is_used(k)]
+# every documented placeholder must still be used somewhere
+for k in sorted(used):
+    if k not in open('references/configuration.md', encoding='utf-8').read():
+        problems.append('used-but-undocumented: ' + k)
+print('\n'.join(problems))
+PY
+)
+  if [ -n "$out" ]; then bad "config drift:"; printf '%s\n' "$out" | sed 's/^/       /'; f27=1; fi
+  [ "$f27" = 0 ] && pass "config placeholders documented and used"
+else
+  pass "python tomllib/yaml unavailable — skipped"
+fi
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"

@@ -25,8 +25,16 @@ fi
 
 project_dir="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
-# Gate: the project must have opted in.
-if [ ! -f "${project_dir}/workflow.config.toml" ] && [ -z "${AGENT_WORKFLOW:-}" ]; then
+# Gate: the project must have opted in. AGENT_WORKFLOW counts as "on" only for a
+# truthy value; 0/false/no/off (any case) are treated as unset so that
+# AGENT_WORKFLOW=0 disables rather than enables.
+agent_workflow_on=0
+case "${AGENT_WORKFLOW:-}" in
+  ""|0|false|FALSE|False|no|NO|No|off|OFF|Off) agent_workflow_on=0 ;;
+  *) agent_workflow_on=1 ;;
+esac
+
+if [ ! -f "${project_dir}/workflow.config.toml" ] && [ "$agent_workflow_on" = "0" ]; then
   exit 0
 fi
 
