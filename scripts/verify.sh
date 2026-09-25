@@ -369,6 +369,29 @@ else
   pass "python tomllib/yaml unavailable — skipped"
 fi
 
+echo "== 28. no skill was silently dropped (count floor) =="
+# Guard against a skill directory going missing without any check noticing.
+n28=$(find skills -name SKILL.md | wc -l)
+if [ "$n28" -lt 13 ]; then
+  bad "expected at least 13 skills, found $n28 (one may have been dropped)"
+else
+  pass "$n28 skills present"
+fi
+
+echo "== 29. every skill-internal reference resolves =="
+# Files cited as references/<name>.md inside a SKILL.md must exist in that skill.
+f29=0
+while IFS= read -r sk; do
+  d=$(dirname "$sk")
+  for ref in $(grep -oE 'references/[a-z0-9-]+\.md' "$sk" | sort -u); do
+    [ -f "$d/$ref" ] || { bad "$sk cites missing $ref"; f29=1; }
+  done
+  for ref in $(grep -oE '`[a-z0-9-]+\.(md|sh|py)`' "$sk" | tr -d '`' | sort -u); do
+    [ -f "$d/$ref" ] || [ -f "$d/references/$ref" ] || { bad "$sk cites missing $ref"; f29=1; }
+  done
+done < <(find skills -name SKILL.md)
+[ "$f29" = 0 ] && pass "all skill-internal references resolve"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"
