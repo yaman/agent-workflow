@@ -85,3 +85,11 @@ surfaces the expected findings. A generic baseline:
 - Verdict written with status `decided`.
 - Config reviewed without the Data Engineer persona.
 - Root password printed to output/logs.
+
+## References
+
+- `references/personas.md` — the persona lenses and their deliverable contract.
+- `references/checklists.md` — the review checklist.
+- `references/configuration.md` — how project values (namespace, database) resolve.
+- `references/surreal.md` — the opt-in verdict write protocol.
+- `references/tool-mapping.md` — subagent dispatch / tool names per harness.

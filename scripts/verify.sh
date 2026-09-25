@@ -414,6 +414,21 @@ for name in $(grep -rhoE 'agent: `[a-z-]+`' skills/story-atdd-workflow/ bootstra
 done
 [ "$f31" = 0 ] && pass "every named agent exists"
 
+echo "== 32. no skill carries a shared reference it never cites =="
+# A skill should carry a copy only if it actually points at it.
+f32=0
+while IFS= read -r f; do
+  d=$(dirname "$(dirname "$f")")
+  grep -rq 'references/configuration.md\|configuration\.md' "$d" --include='*.md' 2>/dev/null \
+    || { bad "uncited configuration.md copy: $d"; f32=1; }
+done < <(find skills -path '*/references/configuration.md')
+while IFS= read -r f; do
+  d=$(dirname "$(dirname "$f")")
+  grep -rq 'references/tool-mapping.md\|tool-mapping\.md' "$d" --include='*.md' 2>/dev/null \
+    || { bad "uncited tool-mapping.md copy: $d"; f32=1; }
+done < <(find skills -path '*/references/tool-mapping.md')
+[ "$f32" = 0 ] && pass "no uncited shared-reference copies"
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "CHECKS FAILED"; fi
 exit "$fail"

@@ -25,7 +25,8 @@ to surrealdb"). Chat verdict first; the DB is the durable record.
 
 - Resolve the target namespace/database from `workflow.config.toml`
   (`backlog.namespace`, `backlog.db`) or, when the project keeps verdicts in
-  their own store, the `verdict_destinations` map in that file.
+  their own store, the `verdict_destinations` map in that file. The full
+  resolution order, key list and defaults are in `configuration.md`.
 - Explicit user override wins. Ambiguous → ask one question. Never invent a
   destination.
 

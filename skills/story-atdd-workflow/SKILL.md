@@ -196,3 +196,5 @@ Last AC green → `story_run.status = "in-review"`, `story.status = "in-review"`
 - `references/story-rules.md` — full story standards (AC format, INVEST, splitting, estimates).
 - `references/surreal-schema.md` — the two-db schema, table shapes, record-link rules, status hygiene.
 - `references/clean-architecture-layers.md` — the default clean architecture layer map for frontend + backend, dependency rule, per-layer test seams, and the top-down vertical slice build order.
+- `references/configuration.md` — how the project values (namespace, databases, deploy, traversal, acceptance) resolve.
+- `references/tool-mapping.md` — the per-harness names for the subagent/tool roles this skill dispatches.

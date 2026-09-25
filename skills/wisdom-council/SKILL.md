@@ -56,3 +56,9 @@ Selection rules:
 ## Prior Council Artifacts (reference corpus)
 
 - The project's own canonical council examples — point at a spec and a plan in the project that show the round structure or the god-mode deliverable contract (verdict table, adjudicated MUST-FIX list). Substitute the project's real paths; the council works without a recorded example.
+
+## References
+
+- `references/personas.md` — the persona library.
+- `references/protocol.md` — the round structure and deliverable contract.
+- `references/tool-mapping.md` — subagent dispatch / tool names per harness.

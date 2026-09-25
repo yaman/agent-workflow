@@ -6,9 +6,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# Shared files, and the skills that must carry each.
-CONFIG_SKILLS="story-atdd-workflow story-writing-council data-science-council product-verification-council wisdom-council"
-TOOLMAP_SKILLS="architecture-rules story-atdd-workflow story-writing-council data-science-council product-verification-council wisdom-council"
+# Shared files, and the skills that must carry each. A skill carries a copy only
+# if it uses the concept: every writer of SurrealDB state needs configuration.md;
+# every skill that dispatches subagents needs tool-mapping.md. architecture-rules
+# is a pure coding standard — it needs neither.
+CONFIG_SKILLS="story-atdd-workflow story-writing-council data-science-council product-verification-council"
+TOOLMAP_SKILLS="story-atdd-workflow story-writing-council data-science-council product-verification-council wisdom-council"
 
 for s in $CONFIG_SKILLS; do
   cp references/configuration.md "skills/$s/references/configuration.md"
