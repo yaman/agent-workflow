@@ -1,0 +1,8 @@
+# Installer / local tooling state
+.workflow/
+__pycache__/
+*.pyc
+
+# Editors / OS
+.DS_Store
+*.swp

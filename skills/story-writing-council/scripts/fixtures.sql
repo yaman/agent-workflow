@@ -1,0 +1,10 @@
+DEFINE TABLE IF NOT EXISTS story;
+DELETE story:`test-sentinel`, story:f1, story:f2, story:f3, story:f4, story:f5, story:f6, story:f7;
+CREATE story:`test-sentinel` SET title = "sentinel", status = "todo", estimate = 0;
+CREATE story:f1 SET title = "Explicit dep source", status = "todo", estimate = 2, body = "This story depends on story:f2 for the loader.";
+CREATE story:f2 SET title = "Explicit dep target", status = "todo", estimate = 1;
+CREATE story:f3 SET title = "Implicit source", status = "todo", estimate = 3, body = "Needs the schema work from Implicit target to run its verifier.";
+CREATE story:f4 SET title = "Implicit target", status = "todo", estimate = 1, body = "Introduces the schema the rest depends on.";
+CREATE story:f5 SET title = "Cycle A", status = "todo", estimate = 2, body = "Pair with Cycle B.";
+CREATE story:f6 SET title = "Cycle B", status = "todo", estimate = 2, body = "Pair with Cycle A.";
+CREATE story:f7 SET title = "Orphan", status = "todo", estimate = 1, depends_on = [story:ghost];

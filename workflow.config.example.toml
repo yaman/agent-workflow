@@ -1,0 +1,76 @@
+# workflow.config.toml — the single knob file the workflow skills resolve before use.
+#
+# Copy this to your project root as `workflow.config.toml`, or to
+# `~/.config/agent-workflow/config.toml` to make it your machine default.
+# Every key has a documented default (see references/configuration.md); an
+# absent file means "use the defaults". Nothing here is project-specific by
+# design — the skills read these values instead of hardcoding any.
+
+[project]
+# Human label, used in prose only (reports, verdicts). Not resolved anywhere.
+name = "my-project"
+
+[backlog]
+# Which backlog model this project uses:
+#   "two-db"    — story-atdd-workflow. Backlog + plan in one db, run state in
+#                 another. Structured `acs`, `phases`, `decisions`, `tech_brief`.
+#   "single-db" — story-writing-council. One flat `story` table whose `body`
+#                 carries the Epic line + Decision details + Gherkin ACs.
+mode = "two-db"
+
+# SurrealDB namespace for this project (ns=<namespace>). Shared by both dbs.
+namespace = "my-project"
+
+# two-db layout (mode = "two-db")
+map_db = "iteration_map"   # backlog + plan: epic, story, phase, decision
+run_db = "iteration"       # active execution: iteration, story_run
+
+# single-db layout (mode = "single-db")
+db = "my-project"
+table = "story"
+
+[surreal]
+endpoint = "http://127.0.0.1:8000"
+# Credentials are NEVER stored in this file. Resolution order (see
+# references/configuration.md):
+#   1. the host's MCP server config, if one is available
+#   2. env var WORKFLOW_SURREAL_PASSWORD (username `root`)
+#   3. ask the user — never guess
+
+[guard]
+# When this env var is set to a truthy value, every write helper MUST refuse to
+# write to the configured real namespace/db (tests point it at a throwaway db).
+test_mode_env = "WORKFLOW_TEST_MODE"
+
+[deploy]
+# Environments an AC must be deployed to AND smoke-tested in before it counts
+# as done. Empty list = the project has no deploy step (local-only).
+environments = ["dev"]
+
+# Command templates the coordinator runs. Placeholders:
+#   ${env}      — the environment name from `environments`
+#   ${base_url} — the base URL for that environment
+# Leave empty to require the project's own AGENTS.md to define them.
+deploy_command = ""
+smoke_command  = ""
+base_urls = { dev = "http://127.0.0.1:8080" }
+
+[traversal]
+# Codebase-traversal tools used by the architect + implementer subagents.
+# Both are optional: set either to "none" to skip it. When neither is
+# available the skills fall back to glob/grep and say so in their report.
+primary  = "gitnexus"   # gitnexus | none
+fallback = "serena"     # serena | none
+
+[acceptance]
+# Test harness names written into tech_briefs. Free strings.
+e2e      = "playwright"  # the acceptance ("A" of ATDD) harness
+contract = "pact"        # the consumer-driven contract harness at the FE→BE seam
+
+# Optional: where the council skills (data-science-council,
+# product-verification-council) record verdicts when the user asks. Keyed by
+# topic; a topic's value is a {namespace, db, table} triple. When absent, the
+# councils fall back to [backlog] and ask the user if ambiguous.
+# [verdict_destinations]
+# core = { namespace = "my-project", db = "adr", table = "verdict" }
+# product = { namespace = "my-project", db = "adr", table = "verdict" }
